@@ -1,0 +1,57 @@
+# Compose gộp FE + BE + Postgres cho repo goodhair.
+# Chạy toàn bộ: docker compose up -d --build
+# Tất cả service nằm chung 1 network nên FE gọi BE qua tên service "backend".
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: goodhair
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d goodhair"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./goodhair_backend
+      dockerfile: Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude "uploads/*" --reload-exclude "*/uploads/*"
+    env_file:
+      - ./goodhair_backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/goodhair
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./goodhair_backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3002:3000"
+    env_file:
+      - ./goodhair_frontend/.env.local
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true            # hot-reload trong Docker
+    volumes:
+      - ./goodhair_frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

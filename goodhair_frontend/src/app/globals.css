@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #0a131d;
+}
+
+.ant-menu-item-selected {
+  border-left: 3px solid #ee8a33 !important;
+  border-radius: 0 6px 6px 0 !important;
+}
+
+.ant-btn-primary {
+  color: #ffffff !important;
+}
