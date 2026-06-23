@@ -43,7 +43,7 @@ class AuthService:
                 {**google_info, "status": status, "requested_at": datetime.now(timezone.utc)}
             )
             if status == AccountStatus.APPROVED:
-                admin_role = await self.role_repo.get_by_key("admin")
+                admin_role = await self.role_repo.get_system_role()
                 await self.employee_repo.create(
                     {
                         "account_id": account.id,

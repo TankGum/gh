@@ -29,6 +29,12 @@ class RoleRepository(BaseRepository[Role]):
         )
         return int(result or 0)
 
+    async def get_system_role(self) -> Role | None:
+        result = await self.session.scalar(
+            select(Role).where(Role.is_system.is_(True), Role.deleted_at.is_(None))
+        )
+        return result
+
     async def get_employee_count(self, role_id: UUID) -> int:
         result = await self.session.scalar(
             select(func.count())
