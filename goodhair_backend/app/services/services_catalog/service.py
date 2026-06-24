@@ -37,6 +37,8 @@ class ServiceCatalogService:
             status=status,
             offset=page.offset,
             limit=page.size,
+            sort_by=page.sort_by,
+            sort_order=page.sort_order,
         )
         total = await self.service_repository.count_services(
             q=q,

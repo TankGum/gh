@@ -26,6 +26,8 @@ export default function ServiceClient() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Create / Edit modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function ServiceClient() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchServices({ q: query || undefined, page, size: pageSize });
+      const data = await fetchServices({ q: query || undefined, page, size: pageSize, sortBy, sortOrder });
       setServices(data.items);
       setTotal(data.total);
     } catch {
@@ -51,7 +53,7 @@ export default function ServiceClient() {
     } finally {
       setLoading(false);
     }
-  }, [query, page, pageSize]);
+  }, [query, page, pageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     refresh();
@@ -142,11 +144,19 @@ export default function ServiceClient() {
     }
   };
 
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
+
   const columns: ColumnDef<HairService>[] = [
     {
       key: 'name',
       header: 'Dịch vụ',
       width: '1.6fr',
+      sortable: true,
+      sortField: 'name',
       render: svc => <span style={{ fontSize: 13.5, fontWeight: 700, color: '#F1ECE1' }}>{svc.name}</span>,
     },
     {
@@ -159,12 +169,16 @@ export default function ServiceClient() {
       key: 'duration',
       header: 'Thời lượng',
       width: '110px',
+      sortable: true,
+      sortField: 'duration_minutes',
       render: svc => <span style={{ fontSize: 13, color: '#F1ECE1' }}>{svc.durationMinutes} phút</span>,
     },
     {
       key: 'price',
       header: 'Giá',
       width: '130px',
+      sortable: true,
+      sortField: 'price',
       render: svc => <span style={{ fontSize: 13, fontWeight: 700, color: '#EE8A33' }}>{priceFormatter.format(svc.price)}đ</span>,
     },
     {
@@ -182,6 +196,8 @@ export default function ServiceClient() {
       header: 'Trạng thái',
       width: '110px',
       align: 'center',
+      sortable: true,
+      sortField: 'status',
       render: svc => (
         <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 20, background: svc.status === 'active' ? 'rgba(63,191,127,0.15)' : 'rgba(100,116,139,0.15)', color: svc.status === 'active' ? '#5FD49A' : '#94a3b8' }}>
           {svc.status === 'active' ? 'Đang bán' : 'Tạm ẩn'}
@@ -243,6 +259,9 @@ export default function ServiceClient() {
         data={services}
         rowKey={svc => svc.id}
         loading={loading}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
         emptyText="Chưa có dịch vụ nào."
         minWidth={860}
         pagination={

@@ -29,7 +29,10 @@ class EmployeeRepository(BaseRepository[Employee]):
         bookable_only: bool = False,
         offset: int = 0,
         limit: int = 20,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> Sequence[Employee]:
+        _SORTABLE = frozenset({"name", "total_bookings", "total_revenue", "status", "created_at"})
         q = select(Employee).where(Employee.deleted_at.is_(None))
         if bookable_only:
             q = q.join(Role, Employee.role_id == Role.id).where(
@@ -41,7 +44,12 @@ class EmployeeRepository(BaseRepository[Employee]):
             q = q.where(Employee.role_id == role_id)
         if status is not None:
             q = q.where(Employee.status == status)
-        q = q.order_by(Employee.created_at.desc()).offset(offset).limit(limit)
+        if sort_by and sort_by in _SORTABLE:
+            col = getattr(Employee, sort_by)
+            q = q.order_by(col.desc() if sort_order == "desc" else col.asc())
+        else:
+            q = q.order_by(Employee.created_at.desc())
+        q = q.offset(offset).limit(limit)
         result = await self.session.scalars(q)
         return result.all()
 

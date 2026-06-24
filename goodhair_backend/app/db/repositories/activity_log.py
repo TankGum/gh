@@ -49,19 +49,23 @@ class ActivityLogRepository(BaseRepository[ActivityLog]):
         date_to: datetime | None = None,
         offset: int = 0,
         limit: int = 20,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> Sequence[ActivityLog]:
-        stmt = (
-            self._filtered(
-                action=action,
-                module=module,
-                q=q,
-                date_from=date_from,
-                date_to=date_to,
-            )
-            .order_by(ActivityLog.created_at.desc())
-            .offset(offset)
-            .limit(limit)
+        _SORTABLE = frozenset({"created_at", "action", "module", "actor_name", "target_label"})
+        stmt = self._filtered(
+            action=action,
+            module=module,
+            q=q,
+            date_from=date_from,
+            date_to=date_to,
         )
+        if sort_by and sort_by in _SORTABLE:
+            col = getattr(ActivityLog, sort_by)
+            stmt = stmt.order_by(col.desc() if sort_order == "desc" else col.asc())
+        else:
+            stmt = stmt.order_by(ActivityLog.created_at.desc())
+        stmt = stmt.offset(offset).limit(limit)
         result = await self.session.scalars(stmt)
         return result.all()
 

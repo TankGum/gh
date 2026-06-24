@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Generic, TypeVar
+from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
@@ -26,6 +26,8 @@ class AppSchema(BaseModel):
 class PageParams(AppSchema):
     page: int = Field(default=1, ge=1)
     size: int = Field(default=20, ge=1, le=100)
+    sort_by: str | None = None
+    sort_order: Literal["asc", "desc"] = "desc"
 
     @property
     def offset(self) -> int:

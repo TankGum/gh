@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     build:
       context: ./goodhair_backend
       dockerfile: Dockerfile
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude "uploads/*" --reload-exclude "*/uploads/*"
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude 'uploads/*' --reload-exclude '*/uploads/*'"
     env_file:
       - ./goodhair_backend/.env
     environment:

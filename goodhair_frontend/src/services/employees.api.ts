@@ -23,12 +23,16 @@ export async function fetchEmployees(params?: {
   size?: number;
   branchId?: string;
   roleId?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }): Promise<PaginatedResponse<Employee>> {
   const q = new URLSearchParams();
   if (params?.page) q.set('page', String(params.page));
   if (params?.size) q.set('size', String(params.size));
   if (params?.branchId) q.set('branch_id', params.branchId);
   if (params?.roleId) q.set('role_id', params.roleId);
+  if (params?.sortBy) q.set('sortBy', params.sortBy);
+  if (params?.sortOrder) q.set('sortOrder', params.sortOrder);
   return apiFetch<PaginatedResponse<Employee>>(`/employees?${q}`);
 }
 

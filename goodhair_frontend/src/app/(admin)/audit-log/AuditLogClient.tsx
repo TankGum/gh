@@ -70,6 +70,8 @@ export default function AuditLogClient() {
   const [searchKey, setSearchKey] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [detail, setDetail] = useState<ActivityLogDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -83,6 +85,8 @@ export default function AuditLogClient() {
         q: query || undefined,
         page,
         size: pageSize,
+        sortBy,
+        sortOrder,
       });
       setLogs(data.items);
       setTotal(data.total);
@@ -92,7 +96,7 @@ export default function AuditLogClient() {
     } finally {
       setLoading(false);
     }
-  }, [action, module, query, page, pageSize]);
+  }, [action, module, query, page, pageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     refresh();
@@ -116,6 +120,11 @@ export default function AuditLogClient() {
     setDetailLoading(false);
   };
 
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
 
   return (
     <div>
@@ -141,12 +150,16 @@ export default function AuditLogClient() {
             key: 'time',
             header: 'Thời gian',
             width: '110px',
+            sortable: true,
+            sortField: 'created_at',
             render: log => <span style={{ fontSize: 12.5, color: 'rgba(241,236,225,0.5)' }}>{formatTime(log.createdAt)}</span>,
           },
           {
             key: 'actor',
             header: 'Người thao tác',
             width: '1.6fr',
+            sortable: true,
+            sortField: 'actor_name',
             render: log => (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <span style={{ width: 32, height: 32, borderRadius: '50%', background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display',serif", fontWeight: 700, color: '#EE8A33', fontSize: 11, flexShrink: 0 }}>
@@ -163,6 +176,8 @@ export default function AuditLogClient() {
             key: 'action',
             header: 'Hành động',
             width: '110px',
+            sortable: true,
+            sortField: 'action',
             render: log => {
               const meta = ACTION_META[log.action];
               return (
@@ -177,18 +192,25 @@ export default function AuditLogClient() {
             key: 'module',
             header: 'Module',
             width: '120px',
+            sortable: true,
+            sortField: 'module',
             render: log => <span style={{ fontSize: 13, color: 'rgba(241,236,225,0.7)' }}>{moduleLabel(log.module)}</span>,
           },
           {
             key: 'target',
             header: 'Đối tượng',
             width: '1.8fr',
+            sortable: true,
+            sortField: 'target_label',
             render: log => <span style={{ fontSize: 13, color: '#F1ECE1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{log.targetLabel}</span>,
           },
         ]}
         data={logs}
         rowKey={log => log.id}
         loading={loading}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
         emptyText="Chưa có hoạt động nào."
         minWidth={820}
         onRowClick={log => openDetail(log.id)}

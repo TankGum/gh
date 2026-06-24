@@ -42,11 +42,13 @@ export default function AccountsClient() {
   const [actioning, setActioning] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchAccounts({ status: tab || undefined, page, size: pageSize });
+      const data = await fetchAccounts({ status: tab || undefined, page, size: pageSize, sortBy, sortOrder });
       setAccounts(data.items);
       setTotal(data.total);
     } catch {
@@ -54,7 +56,7 @@ export default function AccountsClient() {
     } finally {
       setLoading(false);
     }
-  }, [tab, page, pageSize]);
+  }, [tab, page, pageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     refresh();
@@ -82,6 +84,12 @@ export default function AccountsClient() {
     }
   };
 
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
+
   const filtered = accounts.filter(acc => {
     const q = search.toLowerCase();
     return acc.name.toLowerCase().includes(q) || acc.email.toLowerCase().includes(q);
@@ -92,6 +100,8 @@ export default function AccountsClient() {
       key: 'account',
       header: 'Tài khoản',
       width: '1.4fr',
+      sortable: true,
+      sortField: 'name',
       render: acc => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           {acc.avatarUrl ? (
@@ -109,18 +119,24 @@ export default function AccountsClient() {
       key: 'email',
       header: 'Email',
       width: '1.4fr',
+      sortable: true,
+      sortField: 'email',
       render: acc => <span style={{ fontSize: 13, color: 'rgba(241,236,225,0.55)' }}>{acc.email}</span>,
     },
     {
       key: 'time',
       header: 'Thời gian yêu cầu',
       width: '150px',
+      sortable: true,
+      sortField: 'requested_at',
       render: acc => <span style={{ fontSize: 13, color: 'rgba(241,236,225,0.55)' }}>{formatDate(acc.requestedAt)}</span>,
     },
     {
       key: 'status',
       header: 'Trạng thái',
       width: '120px',
+      sortable: true,
+      sortField: 'status',
       render: acc => {
         const badge = STATUS_BADGE[acc.status];
         return <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 20, background: badge.bg, color: badge.color }}>{badge.label}</span>;
@@ -182,6 +198,9 @@ export default function AccountsClient() {
         data={filtered}
         rowKey={acc => acc.id}
         loading={loading}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
         emptyText="Không có tài khoản."
         minWidth={800}
         pagination={

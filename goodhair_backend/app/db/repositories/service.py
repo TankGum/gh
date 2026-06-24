@@ -48,13 +48,17 @@ class ServiceRepository(BaseRepository[Service]):
         status: ServiceStatus | None = None,
         offset: int = 0,
         limit: int = 20,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> Sequence[Service]:
-        stmt = (
-            self._filtered_query(q=q, branch_id=branch_id, status=status)
-            .order_by(Service.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        )
+        _SORTABLE = frozenset({"name", "price", "duration_minutes", "status", "created_at"})
+        stmt = self._filtered_query(q=q, branch_id=branch_id, status=status)
+        if sort_by and sort_by in _SORTABLE:
+            col = getattr(Service, sort_by)
+            stmt = stmt.order_by(col.desc() if sort_order == "desc" else col.asc())
+        else:
+            stmt = stmt.order_by(Service.created_at.desc())
+        stmt = stmt.offset(offset).limit(limit)
         result = await self.session.scalars(stmt)
         return result.all()
 
