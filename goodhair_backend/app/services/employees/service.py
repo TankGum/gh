@@ -41,6 +41,8 @@ class EmployeeService:
             bookable_only=bookable_only,
             offset=page.offset,
             limit=page.size,
+            sort_by=page.sort_by,
+            sort_order=page.sort_order,
         )
         total = await self.repo.count_employees(
             branch_id=branch_id,

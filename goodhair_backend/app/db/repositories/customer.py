@@ -21,7 +21,10 @@ class CustomerRepository(BaseRepository[Customer]):
         q: str | None = None,
         offset: int = 0,
         limit: int = 20,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> Sequence[Customer]:
+        _SORTABLE = frozenset({"name", "phone", "total_visits", "total_spent", "last_visit_date", "created_at"})
         stmt = select(Customer)
         if q:
             stmt = stmt.where(
@@ -30,7 +33,12 @@ class CustomerRepository(BaseRepository[Customer]):
                     Customer.phone.ilike(f"%{q}%"),
                 )
             )
-        stmt = stmt.order_by(Customer.last_visit_date.desc().nullslast()).offset(offset).limit(limit)
+        if sort_by and sort_by in _SORTABLE:
+            col = getattr(Customer, sort_by)
+            stmt = stmt.order_by(col.desc() if sort_order == "desc" else col.asc())
+        else:
+            stmt = stmt.order_by(Customer.last_visit_date.desc().nullslast())
+        stmt = stmt.offset(offset).limit(limit)
         result = await self.session.scalars(stmt)
         return result.all()
 

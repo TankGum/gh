@@ -36,6 +36,8 @@ export default function EmployeesClient() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Load branches and roles once on mount
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function EmployeesClient() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const empData = await fetchEmployees({ page, size: pageSize });
+      const empData = await fetchEmployees({ page, size: pageSize, sortBy, sortOrder });
       setEmployees(empData.items);
       setTotal(empData.total);
     } catch {
@@ -59,7 +61,7 @@ export default function EmployeesClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     refresh();
@@ -127,11 +129,19 @@ export default function EmployeesClient() {
     return e.name.toLowerCase().includes(q) || (e.email ?? '').toLowerCase().includes(q);
   });
 
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
+
   const empColumns: ColumnDef<Employee>[] = [
     {
       key: 'name',
       header: 'Nhân viên',
       width: '1.4fr',
+      sortable: true,
+      sortField: 'name',
       render: emp => {
         const initials = emp.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
         return (
@@ -168,6 +178,8 @@ export default function EmployeesClient() {
       header: 'Lượt booking',
       width: '100px',
       align: 'right',
+      sortable: true,
+      sortField: 'total_bookings',
       render: emp => <span style={{ fontSize: 13, color: '#F1ECE1' }}>{emp.totalBookings}</span>,
     },
     {
@@ -175,6 +187,8 @@ export default function EmployeesClient() {
       header: 'Doanh thu',
       width: '120px',
       align: 'right',
+      sortable: true,
+      sortField: 'total_revenue',
       render: emp => <span style={{ fontSize: 13, fontWeight: 600, color: '#F1ECE1' }}>{formatCurrency(emp.totalRevenue)}</span>,
     },
     {
@@ -182,6 +196,8 @@ export default function EmployeesClient() {
       header: 'Trạng thái',
       width: '100px',
       align: 'center',
+      sortable: true,
+      sortField: 'status',
       render: emp => {
         const st = statusLabels[emp.status];
         return <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 20, background: st.bg, color: st.color }}>{st.label}</span>;
@@ -223,6 +239,9 @@ export default function EmployeesClient() {
         data={visible}
         rowKey={emp => emp.id}
         loading={loading}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
         emptyText={employees.length === 0 ? 'Chưa có nhân viên nào. Khi admin duyệt tài khoản mới, nhân viên sẽ được tạo tự động.' : 'Không tìm thấy nhân viên phù hợp.'}
         minWidth={960}
         pagination={

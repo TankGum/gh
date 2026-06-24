@@ -21,6 +21,8 @@ export interface FetchCustomersParams {
   q?: string;
   page?: number;
   size?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export async function fetchCustomers(
@@ -30,6 +32,8 @@ export async function fetchCustomers(
   if (params.q) search.set('q', params.q);
   if (params.page) search.set('page', String(params.page));
   if (params.size) search.set('size', String(params.size));
+  if (params.sortBy) search.set('sortBy', params.sortBy);
+  if (params.sortOrder) search.set('sortOrder', params.sortOrder);
   const query = search.toString();
   return clientFetch(`/customers${query ? `?${query}` : ''}`);
 }

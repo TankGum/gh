@@ -16,6 +16,8 @@ export interface FetchServicesParams {
   status?: ServiceStatus;
   page?: number;
   size?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export async function fetchServices(
@@ -27,6 +29,8 @@ export async function fetchServices(
   if (params.status) search.set('status', params.status);
   if (params.page) search.set('page', String(params.page));
   if (params.size) search.set('size', String(params.size));
+  if (params.sortBy) search.set('sortBy', params.sortBy);
+  if (params.sortOrder) search.set('sortOrder', params.sortOrder);
 
   const query = search.toString();
   const url = `${API_URL}/services${query ? `?${query}` : ''}`;

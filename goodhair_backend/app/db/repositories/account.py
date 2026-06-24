@@ -39,11 +39,19 @@ class AccountRepository(BaseRepository[Account]):
         status: AccountStatus | None,
         offset: int,
         limit: int,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
     ) -> Sequence[Account]:
+        _SORTABLE = frozenset({"name", "email", "status", "requested_at", "created_at"})
         q = select(Account).where(Account.deleted_at.is_(None))
         if status is not None:
             q = q.where(Account.status == status)
-        q = q.order_by(Account.requested_at.desc()).offset(offset).limit(limit)
+        if sort_by and sort_by in _SORTABLE:
+            col = getattr(Account, sort_by)
+            q = q.order_by(col.desc() if sort_order == "desc" else col.asc())
+        else:
+            q = q.order_by(Account.requested_at.desc())
+        q = q.offset(offset).limit(limit)
         result = await self.session.scalars(q)
         return result.all()
 

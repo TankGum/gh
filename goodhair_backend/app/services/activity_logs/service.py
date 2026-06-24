@@ -96,6 +96,8 @@ class ActivityLogService:
             date_to=params.date_to,
             offset=params.offset,
             limit=params.size,
+            sort_by=params.sort_by,
+            sort_order=params.sort_order,
         )
         total = await self.repo.count_logs(
             action=params.action,

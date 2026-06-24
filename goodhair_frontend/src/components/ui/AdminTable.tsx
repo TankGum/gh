@@ -2,12 +2,15 @@
 
 import { ReactNode } from 'react';
 import { Spin } from 'antd';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 export interface ColumnDef<T> {
   key: string;
   header: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
+  sortable?: boolean;
+  sortField?: string;
   render: (row: T) => ReactNode;
 }
 
@@ -20,6 +23,18 @@ interface AdminTableProps<T> {
   minWidth?: number;
   pagination?: ReactNode;
   onRowClick?: (row: T) => void;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSort?: (key: string, order: 'asc' | 'desc') => void;
+}
+
+function SortIcon({ active, direction }: { active: boolean; direction?: 'asc' | 'desc' }) {
+  return (
+    <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1, marginLeft: 4, opacity: active ? 1 : 0.3 }}>
+      <ChevronUp size={10} style={{ color: active && direction === 'asc' ? '#EE8A33' : 'rgba(241,236,225,0.45)', marginBottom: -2 }} />
+      <ChevronDown size={10} style={{ color: active && direction === 'desc' ? '#EE8A33' : 'rgba(241,236,225,0.45)', marginTop: -2 }} />
+    </span>
+  );
 }
 
 export default function AdminTable<T>({
@@ -31,8 +46,19 @@ export default function AdminTable<T>({
   minWidth = 720,
   pagination,
   onRowClick,
+  sortBy,
+  sortOrder = 'desc',
+  onSort,
 }: AdminTableProps<T>) {
   const gridCols = columns.map(c => c.width ?? '1fr').join(' ');
+
+  const handleHeaderClick = (col: ColumnDef<T>) => {
+    if (!col.sortable || !onSort) return;
+    const field = col.sortField ?? col.key;
+    const isActive = sortBy === field;
+    const nextOrder = isActive && sortOrder === 'desc' ? 'asc' : 'desc';
+    onSort(field, nextOrder);
+  };
 
   return (
     <div style={{ background: '#0f1e2b', border: '1px solid rgba(238,138,51,0.16)', borderRadius: 8, overflow: 'hidden' }}>
@@ -54,7 +80,21 @@ export default function AdminTable<T>({
               fontWeight: 700,
             }}>
               {columns.map(col => (
-                <span key={col.key} style={{ textAlign: col.align ?? 'left' }}>{col.header}</span>
+                <span
+                  key={col.key}
+                  onClick={() => handleHeaderClick(col)}
+                  style={{
+                    textAlign: col.align ?? 'left',
+                    cursor: col.sortable ? 'pointer' : undefined,
+                    userSelect: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start',
+                  }}
+                >
+                  {col.header}
+                  {col.sortable && <SortIcon active={sortBy === col.key} direction={sortBy === col.key ? sortOrder : undefined} />}
+                </span>
               ))}
             </div>
 

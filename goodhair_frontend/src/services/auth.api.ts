@@ -43,11 +43,15 @@ export async function fetchAccounts(params?: {
   status?: string;
   page?: number;
   size?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }): Promise<PaginatedAccounts> {
   const q = new URLSearchParams();
   if (params?.status) q.set('status', params.status);
   if (params?.page) q.set('page', String(params.page));
   if (params?.size) q.set('size', String(params.size));
+  if (params?.sortBy) q.set('sortBy', params.sortBy);
+  if (params?.sortOrder) q.set('sortOrder', params.sortOrder);
   return apiFetch<PaginatedAccounts>(`/accounts?${q}`);
 }
 

@@ -17,7 +17,8 @@ class CustomerService:
         page: PageParams,
     ) -> tuple[list, int]:
         items = await self.repo.list_customers(
-            q=q, offset=page.offset, limit=page.size
+            q=q, offset=page.offset, limit=page.size,
+            sort_by=page.sort_by, sort_order=page.sort_order,
         )
         total = await self.repo.count_customers(q=q)
         return list(items), total

@@ -24,11 +24,13 @@ export default function CustomersClient() {
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchCustomers({ q: query || undefined, page, size: pageSize });
+      const data = await fetchCustomers({ q: query || undefined, page, size: pageSize, sortBy, sortOrder });
       setCustomers(data.items);
       setTotal(data.total);
     } catch {
@@ -37,12 +39,17 @@ export default function CustomersClient() {
     } finally {
       setLoading(false);
     }
-  }, [query, page, pageSize]);
+  }, [query, page, pageSize, sortBy, sortOrder]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
+  const handleSort = (field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
 
   return (
     <div>
@@ -60,6 +67,8 @@ export default function CustomersClient() {
             key: 'name',
             header: 'Khách hàng',
             width: '1.6fr',
+            sortable: true,
+            sortField: 'name',
             render: c => {
               const initials = c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
               return (
@@ -72,14 +81,17 @@ export default function CustomersClient() {
               );
             },
           },
-          { key: 'phone', header: 'SĐT', width: '1.2fr', render: c => <span style={{ fontSize: 13, color: 'rgba(241,236,225,0.6)' }}>{c.phone}</span> },
-          { key: 'visits', header: 'Lượt đến', width: '90px', render: c => <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{c.totalVisits}</span> },
-          { key: 'spent', header: 'Chi tiêu', width: '130px', render: c => <span style={{ fontSize: 13.5, fontWeight: 700, color: '#EE8A33' }}>{formatCurrency(c.totalSpent)}</span> },
-          { key: 'last', header: 'Lần cuối', width: '120px', render: c => <span style={{ fontSize: 12.5, color: 'rgba(241,236,225,0.5)' }}>{formatDate(c.lastVisitDate)}</span> },
+          { key: 'phone', header: 'SĐT', width: '1.2fr', sortable: true, sortField: 'phone', render: c => <span style={{ fontSize: 13, color: 'rgba(241,236,225,0.6)' }}>{c.phone}</span> },
+          { key: 'visits', header: 'Lượt đến', width: '90px', sortable: true, sortField: 'total_visits', render: c => <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{c.totalVisits}</span> },
+          { key: 'spent', header: 'Chi tiêu', width: '130px', sortable: true, sortField: 'total_spent', render: c => <span style={{ fontSize: 13.5, fontWeight: 700, color: '#EE8A33' }}>{formatCurrency(c.totalSpent)}</span> },
+          { key: 'last', header: 'Lần cuối', width: '120px', sortable: true, sortField: 'last_visit_date', render: c => <span style={{ fontSize: 12.5, color: 'rgba(241,236,225,0.5)' }}>{formatDate(c.lastVisitDate)}</span> },
         ]}
         data={customers}
         rowKey={c => c.id}
         loading={loading}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
         emptyText="Chưa có khách hàng nào."
         minWidth={760}
         pagination={
