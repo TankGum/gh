@@ -1,18 +1,23 @@
 'use client';
 
 import { useState, KeyboardEvent } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface SearchBarProps {
   placeholder?: string;
   onSearch: (value: string) => void;
-  width?: number;
+  width?: number | string;
 }
 
-export default function SearchBar({ placeholder = 'Tìm kiếm...', onSearch, width = 300 }: SearchBarProps) {
+export default function SearchBar({ placeholder = 'Tìm kiếm', onSearch, width = '100%' }: SearchBarProps) {
   const [value, setValue] = useState('');
 
   const commit = () => onSearch(value);
+
+  const clear = () => {
+    setValue('');
+    onSearch('');
+  };
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') commit();
@@ -31,6 +36,7 @@ export default function SearchBar({ placeholder = 'Tìm kiếm...', onSearch, wi
         padding: '0 12px',
         height: '100%',
         flex: 1,
+        minWidth: 0,
       }}>
         <Search size={14} style={{ color: '#64748b', flexShrink: 0 }} />
         <input
@@ -49,6 +55,22 @@ export default function SearchBar({ placeholder = 'Tìm kiếm...', onSearch, wi
             minWidth: 0,
           }}
         />
+        <button
+          onClick={clear}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 2,
+            display: 'flex',
+            alignItems: 'center',
+            color: '#64748b',
+            cursor: 'pointer',
+            flexShrink: 0,
+            visibility: value ? 'visible' : 'hidden',
+          }}
+        >
+          <X size={13} />
+        </button>
       </div>
       <button
         onClick={commit}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Select, App, Pagination } from 'antd';
 import { Trash2, Pencil, Upload } from 'lucide-react';
-import SearchBar from '@/components/ui/SearchBar';
+import FilterBar from '@/components/ui/FilterBar';
 import { fetchEmployees, updateEmployee, deleteEmployee, uploadEmployeeImage } from '@/services/employees.api';
 import { fetchBranches } from '@/services/branches.api';
 import { fetchRoles } from '@/services/roles.api';
@@ -214,10 +214,9 @@ export default function EmployeesClient() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4 }}>Nhân viên</h1>
-          <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>{total} nhân viên</p>
         </div>
-        <SearchBar placeholder="Tìm nhân viên..." onSearch={setSearch} width={300} />
       </div>
+      <FilterBar onSearch={setSearch} placeholder="Tìm nhân viên" marginBottom={16} />
 
       <AdminTable
         columns={empColumns}

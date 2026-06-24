@@ -12,6 +12,8 @@ class BranchBase(AppSchema):
     code: str | None = Field(default=None, max_length=50)
     address: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=1000)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     opening_time: time | None = None
     closing_time: time | None = None
     rating: float = Field(default=0, ge=0, le=5)
@@ -28,6 +30,8 @@ class BranchUpdate(AppSchema):
     code: str | None = Field(default=None, max_length=50)
     address: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=1000)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     opening_time: time | None = None
     closing_time: time | None = None
     rating: float | None = Field(default=None, ge=0, le=5)

@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Pagination, Spin } from 'antd';
 import { X } from 'lucide-react';
-import SearchBar from '@/components/ui/SearchBar';
+import FilterBar from '@/components/ui/FilterBar';
+import FilterSelect from '@/components/ui/FilterSelect';
+import FilterClearButton from '@/components/ui/FilterClearButton';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
 import { fetchLogs, fetchLogDetail } from '@/services/logs.api';
 import type {
@@ -45,17 +47,18 @@ function initialsOf(name: string): string {
   return name.split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase() || '?';
 }
 
-const selectStyle: React.CSSProperties = {
-  background: '#0F1E2B',
-  border: '1px solid rgba(238,138,51,0.18)',
-  borderRadius: 8,
-  padding: '10px 14px',
-  color: '#F1ECE1',
-  fontFamily: "'Hanken Grotesk',sans-serif",
-  fontSize: 13,
-  cursor: 'pointer',
-  outline: 'none',
-};
+const ACTION_OPTIONS = [
+  { value: '', label: 'Mọi hành động' },
+  { value: 'create', label: 'Tạo mới' },
+  { value: 'update', label: 'Cập nhật' },
+  { value: 'delete', label: 'Xoá' },
+  { value: 'login', label: 'Đăng nhập' },
+];
+
+const MODULE_OPTIONS = [
+  { value: '', label: 'Mọi module' },
+  ...Object.entries(MODULE_LABELS).map(([value, label]) => ({ value, label })),
+];
 
 export default function AuditLogClient() {
   const [logs, setLogs] = useState<ActivityLogListItem[]>([]);
@@ -120,36 +123,17 @@ export default function AuditLogClient() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4 }}>Nhật ký hoạt động</h1>
-          <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Lịch sử mọi thay đổi trên toàn hệ thống · {total} bản ghi</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-        <SearchBar key={searchKey} placeholder="Tìm theo người thao tác hoặc đối tượng..." onSearch={(v) => { setQuery(v); setPage(1); }} width={360} />
-        <select value={action} onChange={(e) => { setAction(e.target.value as ActivityAction | ''); setPage(1); }} style={selectStyle}>
-          <option value="">Mọi hành động</option>
-          <option value="create">Tạo mới</option>
-          <option value="update">Cập nhật</option>
-          <option value="delete">Xoá</option>
-          <option value="login">Đăng nhập</option>
-        </select>
-        <select value={module} onChange={(e) => { setModule(e.target.value); setPage(1); }} style={selectStyle}>
-          <option value="">Mọi module</option>
-          {Object.entries(MODULE_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
+      <FilterBar searchKey={searchKey} onSearch={(v) => { setQuery(v); setPage(1); }}>
+        <FilterSelect value={action} onChange={(v) => { setAction(v as ActivityAction | ''); setPage(1); }} options={ACTION_OPTIONS} />
+        <FilterSelect value={module} onChange={(v) => { setModule(v); setPage(1); }} options={MODULE_OPTIONS} />
         {(query || action || module) && (
-          <button
-            type="button"
-            onClick={() => { setQuery(''); setSearchKey(k => k + 1); setAction(''); setModule(''); setPage(1); }}
-            style={{ background: 'transparent', border: '1px solid rgba(238,138,51,0.25)', color: 'rgba(241,236,225,0.7)', padding: '0 14px', height: 36, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-          >
-            Xoá lọc
-          </button>
+          <FilterClearButton onClick={() => { setQuery(''); setSearchKey(k => k + 1); setAction(''); setModule(''); setPage(1); }} />
         )}
-      </div>
+      </FilterBar>
 
       <AdminTable<ActivityLogListItem>
         columns={[

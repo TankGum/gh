@@ -74,7 +74,7 @@ class BookingService:
                 duration_minutes=data.duration_minutes,
             )
             if overlap:
-                raise ConflictError(detail={"message": "Barber đã có lịch trong khung giờ này"})
+                raise ConflictError()
         code = await self.repo.get_next_code()
         payload = data.model_dump(exclude={"service_ids"})
         payload["code"] = code
@@ -106,7 +106,7 @@ class BookingService:
                 exclude_id=booking_id,
             )
             if overlap:
-                raise ConflictError(detail={"message": "Barber đã có lịch trong khung giờ này"})
+                raise ConflictError()
         was_completed = booking.status == BookingStatus.COMPLETED
         payload = data.model_dump(exclude={"service_ids"}, exclude_unset=True)
         if payload:

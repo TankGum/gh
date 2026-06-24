@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Khách hàng | GoodHair' };
 
 export default function CustomersPage() {
   return (
-    <div style={{ padding: 28 }}>
+    <div className="p-4 md:p-7">
       <CustomersClient />
     </div>
   );

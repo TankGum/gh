@@ -2,11 +2,12 @@
 import type { PaginatedResponse } from '@/types/service.type';
 import type {
   PublicBranch,
+  PublicCustomer,
   PublicEmployee,
   PublicService,
 } from '@/types/public.type';
 
-export type { PublicBranch, PublicEmployee, PublicService };
+export type { PublicBranch, PublicCustomer, PublicEmployee, PublicService };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8002/api/v1';
 
@@ -49,6 +50,12 @@ export function fetchPublicEmployees(
   return publicFetch(`/public/employees${query ? `?${query}` : ''}`);
 }
 
+export function fetchPublicTopCustomers(
+  limit: number = 12,
+): Promise<PublicCustomer[]> {
+  return publicFetch(`/public/top-customers?limit=${limit}`);
+}
+
 export interface BookedWindow {
   startMinutes: number;
   durationMinutes: number;
@@ -67,25 +74,45 @@ export async function fetchAvailableSlots(
   return data.bookedWindows ?? [];
 }
 
-export async function createPublicBooking(payload: {
-  customerName: string;
-  customerPhone: string;
-  employeeId?: string | null;
-  branchId?: string | null;
-  date: string;
-  startTime: string;
-  durationMinutes?: number;
-  total?: number;
-  serviceIds?: string[];
-}): Promise<{ code: string; customerName: string; date: string; startTime: string; total: number }> {
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly errorCode: string,
+    public readonly detail: string | undefined,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+export async function createPublicBooking(
+  payload: {
+    customerName: string;
+    customerPhone: string;
+    employeeId?: string | null;
+    branchId?: string | null;
+    date: string;
+    startTime: string;
+    durationMinutes?: number;
+    total?: number;
+    serviceIds?: string[];
+  },
+  lang?: 'vi' | 'en',
+): Promise<{ code: string; customerName: string; date: string; startTime: string; total: number }> {
   const res = await fetch(`${API_URL}/public/bookings`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept-Language': lang ?? 'vi',
+    },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new Error(body?.message ?? `Booking error: ${res.status}`);
+    const errorCode = (body?.errorCode as string) ?? 'UNKNOWN';
+    const detail: string | undefined = body?.detail?.message ?? body?.message ?? undefined;
+    throw new ApiError(detail ?? `Booking error: ${res.status}`, errorCode, detail, res.status);
   }
   return res.json();
 }

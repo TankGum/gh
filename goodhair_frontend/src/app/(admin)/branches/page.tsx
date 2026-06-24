@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function BranchesPage() {
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <BranchClient />
     </div>
   );

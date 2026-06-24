@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Quản lý vai trò | GoodHair' };
 
 export default function RolesPage() {
   return (
-    <div style={{ padding: 28 }}>
+    <div className="p-4 md:p-7">
       <RolesClient />
     </div>
   );

@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Doanh thu | GoodHair' };
 
 export default function RevenuePage() {
   return (
-    <div style={{ padding: 28 }}>
+    <div className="p-4 md:p-7">
       <RevenueClient />
     </div>
   );

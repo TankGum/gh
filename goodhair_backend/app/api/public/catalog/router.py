@@ -25,10 +25,12 @@ from app.schemas.public import (
     PublicBookingCreate,
     PublicBookingRead,
     PublicBranchRead,
+    PublicCustomerRead,
     PublicEmployeeRead,
     PublicServiceRead,
 )
 from app.services.branches.service import BranchService
+from app.services.customers.service import CustomerService
 from app.services.employees.service import EmployeeService
 from app.services.services_catalog.service import ServiceCatalogService
 
@@ -60,6 +62,15 @@ async def list_public_services(
     )
     items = [PublicServiceRead.model_validate(s) for s in services]
     return PaginatedResponse.create(items=items, total=total, page=page)
+
+
+@router.get("/top-customers", response_model=list[PublicCustomerRead])
+async def list_top_customers(
+    limit: int = Query(default=12, ge=1, le=50),
+    session: AsyncSession = Depends(get_db_session),
+) -> list[PublicCustomerRead]:
+    items = await CustomerService(session).list_top_customers(limit=limit)
+    return [PublicCustomerRead.model_validate(c) for c in items]
 
 
 @router.get("/employees", response_model=PaginatedResponse[PublicEmployeeRead])
@@ -124,7 +135,7 @@ async def create_public_booking(
             duration_minutes=payload.duration_minutes,
         )
         if overlap:
-            raise ConflictError(detail={"message": "Barber đã có lịch trong khung giờ này"})
+            raise ConflictError()
     code = await repo.get_next_code()
     data = payload.model_dump(exclude={"service_ids"})
     data["code"] = code

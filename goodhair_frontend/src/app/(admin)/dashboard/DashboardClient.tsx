@@ -56,7 +56,7 @@ export default function DashboardClient() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 20, marginTop: 20 }}>
+      <div className="grid gap-5 mt-5 grid-cols-1 lg:grid-cols-[1.6fr_1fr]">
         {/* Revenue 7-day chart */}
         <div style={{ background: '#0F1E2B', border: '1px solid rgba(238,138,51,.16)', borderRadius: 8, padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
@@ -118,7 +118,8 @@ export default function DashboardClient() {
             Mở lịch board
           </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ overflowX: 'auto' }}>
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 540 }}>
           {data.todayBookings.length === 0 ? (
             <div style={{ fontSize: 13, color: 'rgba(241,236,225,.4)', textAlign: 'center', padding: 20 }}>
               Hôm nay chưa có lịch hẹn
@@ -136,6 +137,7 @@ export default function DashboardClient() {
               </div>
             ))
           )}
+        </div>
         </div>
       </div>
     </div>
