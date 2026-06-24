@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { DatePicker, Select, Spin, App } from 'antd';
-import SearchBar from '@/components/ui/SearchBar';
+import FilterBar from '@/components/ui/FilterBar';
+import FilterSelect from '@/components/ui/FilterSelect';
 import { fetchBookings, createBooking, updateBooking, deleteBooking } from '@/services/bookings.api';
 import { fetchEmployees } from '@/services/employees.api';
 import { fetchBranches } from '@/services/branches.api';
@@ -320,47 +321,26 @@ export default function ManageBookingsClient() {
         )}
       </div>
 
-      {/* Board controls */}
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 18 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <SearchBar placeholder="Tìm nhân viên..." onSearch={setSearch} width={260} />
-        <div style={{ position: 'relative', display: 'inline-block' }}>
-          <select
-            value={branchFilter}
-            onChange={e => setBranchFilter(e.target.value)}
-            style={{ appearance: 'none', background: '#0F1E2B', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '9px 34px 9px 14px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, outline: 'none', cursor: 'pointer' }}
-          >
-            {branchOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <span style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#EE8A33', fontSize: 10 }}>▾</span>
-        </div>
-        </div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 13px', background: '#0F1E2B', border: '1px solid rgba(238,138,51,.18)', borderRadius: 8 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EE8A33" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          <span style={{ fontSize: 12, color: 'rgba(241,236,225,.55)' }}>Giờ làm việc</span>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: '#F1ECE1', fontVariantNumeric: 'tabular-nums' }}>{hoursRange.label}</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 14 }}>
-            {(Object.keys(STATUS_META) as BookingStatus[]).map(k => (
-              <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: 2, background: STATUS_META[k].dot }} />
-                <span style={{ fontSize: 11.5, color: 'rgba(241,236,225,.55)' }}>{STATUS_META[k].label}</span>
-              </div>
-            ))}
+      {/* Status legend */}
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 14 }}>
+        {(Object.keys(STATUS_META) as BookingStatus[]).map(k => (
+          <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: STATUS_META[k].dot }} />
+            <span style={{ fontSize: 11.5, color: 'rgba(241,236,225,.55)' }}>{STATUS_META[k].label}</span>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Date select */}
-      <div style={{ marginBottom: 16 }}>
+      {/* Row 2: Search + date + branch */}
+      <FilterBar onSearch={setSearch} placeholder="Tìm barber">
         <DatePicker
           value={selectedDate ? dayjs(selectedDate) : null}
           onChange={(d) => setSelectedDate(d ? d.format('YYYY-MM-DD') : today)}
           allowClear={false}
-          style={{ width: 220 }}
+          style={{ height: 36, background: '#0f1e2b', borderColor: 'rgba(238,138,51,.25)' }}
         />
-      </div>
+        <FilterSelect value={branchFilter} onChange={setBranchFilter} options={branchOpts} />
+      </FilterBar>
 
       {/* Board */}
       {loading ? (

@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Nhân viên | GoodHair' };
 
 export default function EmployeesPage() {
   return (
-    <div style={{ padding: 28 }}>
+    <div className="p-4 md:p-7">
       <EmployeesClient />
     </div>
   );

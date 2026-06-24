@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Nhật ký hoạt động | GoodHair
 
 export default function AuditLogPage() {
   return (
-    <div style={{ padding: 28 }}>
+    <div className="p-4 md:p-7">
       <AuditLogClient />
     </div>
   );

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Pagination } from 'antd';
-import SearchBar from '@/components/ui/SearchBar';
+import FilterBar from '@/components/ui/FilterBar';
+import FilterSelect from '@/components/ui/FilterSelect';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
 import { fetchAccounts, approveAccount, rejectAccount } from '@/services/auth.api';
 import type { Account, AccountStatus } from '@/types/account.type';
@@ -164,30 +165,16 @@ export default function AccountsClient() {
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0 }}>Tài khoản</h1>
           <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0' }}>{total} tài khoản</p>
         </div>
-        <SearchBar placeholder="Tìm theo tên, email..." onSearch={setSearch} width={300} />
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {STATUS_TABS.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => { setTab(t.value); setPage(1); }}
-            style={{
-              padding: '7px 16px',
-              borderRadius: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: tab === t.value ? '1px solid #EE8A33' : '1px solid #1e293b',
-              background: tab === t.value ? 'rgba(238,138,51,.15)' : '#0f1e2b',
-              color: tab === t.value ? '#EE8A33' : '#94a3b8',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Search + filters */}
+      <FilterBar onSearch={setSearch} placeholder="Tìm tài khoản" marginBottom={20}>
+        <FilterSelect
+          value={tab}
+          onChange={(v) => { setTab(v as AccountStatus | ''); setPage(1); }}
+          options={STATUS_TABS.map(t => ({ value: t.value, label: t.label }))}
+        />
+      </FilterBar>
 
       {/* Table */}
       <AdminTable

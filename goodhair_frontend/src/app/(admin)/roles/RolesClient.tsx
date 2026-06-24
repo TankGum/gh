@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { App, Spin, Input } from 'antd';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import SearchBar from '@/components/ui/SearchBar';
+import FilterBar from '@/components/ui/FilterBar';
 import { fetchRoles, createRole, updateRole, deleteRole } from '@/services/roles.api';
 import type { Role, PermissionMap, RoleCreatePayload, RoleUpdatePayload } from '@/types/role.type';
 import Modal from '@/components/ui/Modal';
@@ -201,24 +201,21 @@ export default function RolesClient() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4 }}>Quản lý vai trò</h1>
-          <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Phân quyền truy cập cho từng vai trò</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <SearchBar placeholder="Tìm vai trò..." onSearch={setSearch} width={260} />
-          {canCreate && (
-            <button
-              onClick={openCreate}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EE8A33', border: 'none', color: '#0B1620', padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-            >
-              <Plus size={15} />
-              Thêm mới
-            </button>
-          )}
-        </div>
+        {canCreate && (
+          <button
+            onClick={openCreate}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EE8A33', border: 'none', color: '#0B1620', padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+          >
+            <Plus size={15} />
+            Thêm mới
+          </button>
+        )}
       </div>
+      <FilterBar onSearch={setSearch} placeholder="Tìm vai trò" marginBottom={20} />
 
       {error && (
         <div style={{ marginBottom: 16, padding: '8px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, color: '#f87171', fontSize: 14 }}>

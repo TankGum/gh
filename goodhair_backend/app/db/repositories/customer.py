@@ -45,3 +45,16 @@ class CustomerRepository(BaseRepository[Customer]):
             )
         result = await self.session.scalar(stmt)
         return int(result or 0)
+
+    async def list_top_customers(
+        self,
+        *,
+        limit: int = 20,
+    ) -> Sequence[Customer]:
+        stmt = (
+            select(Customer)
+            .order_by(Customer.total_visits.desc(), Customer.last_visit_date.desc().nullslast())
+            .limit(limit)
+        )
+        result = await self.session.scalars(stmt)
+        return result.all()

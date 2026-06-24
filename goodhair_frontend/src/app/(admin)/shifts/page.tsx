@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Ca làm việc | GoodHair' };
 
 export default function ShiftsPage() {
   return (
-    <div style={{ padding: 28 }}>
+    <div className="p-4 md:p-7">
       <ShiftsClient />
     </div>
   );

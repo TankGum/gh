@@ -13,7 +13,7 @@ import {
   MapPin,
   Upload,
 } from 'lucide-react';
-import SearchBar from '@/components/ui/SearchBar';
+import FilterBar from '@/components/ui/FilterBar';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Branch,
@@ -56,6 +56,8 @@ interface BranchFormState {
   name: string;
   address: string;
   imageUrl: string;
+  latitude: string;
+  longitude: string;
   openingTime: string;
   closingTime: string;
   rating: string;
@@ -67,6 +69,8 @@ const emptyForm: BranchFormState = {
   name: '',
   address: '',
   imageUrl: '',
+  latitude: '',
+  longitude: '',
   openingTime: '09:00',
   closingTime: '22:00',
   rating: '0',
@@ -177,6 +181,31 @@ function BranchForm({
           className={inputCls}
           placeholder="VD: 65 Lê Lợi, Quận 1"
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm text-slate-400 mb-1">Vĩ độ (latitude)</label>
+          <input
+            type="number"
+            step="any"
+            value={form.latitude}
+            onChange={(e) => onChange({ latitude: e.target.value })}
+            className={inputCls}
+            placeholder="VD: 10.7769"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-slate-400 mb-1">Kinh độ (longitude)</label>
+          <input
+            type="number"
+            step="any"
+            value={form.longitude}
+            onChange={(e) => onChange({ longitude: e.target.value })}
+            className={inputCls}
+            placeholder="VD: 106.7009"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -418,6 +447,8 @@ export default function BranchClient() {
     name: form.name,
     address: form.address || null,
     imageUrl: form.imageUrl || null,
+    latitude: form.latitude ? Number(form.latitude) : null,
+    longitude: form.longitude ? Number(form.longitude) : null,
     openingTime: inputToTime(form.openingTime),
     closingTime: inputToTime(form.closingTime),
     rating: Number(form.rating),
@@ -431,6 +462,8 @@ export default function BranchClient() {
       name: b.name,
       address: b.address ?? '',
       imageUrl: b.imageUrl ?? '',
+      latitude: b.latitude ? String(b.latitude) : '',
+      longitude: b.longitude ? String(b.longitude) : '',
       openingTime: timeToInput(b.openingTime) || '09:00',
       closingTime: timeToInput(b.closingTime) || '22:00',
       rating: String(b.rating),
@@ -490,8 +523,7 @@ export default function BranchClient() {
       {/* Header */}
       <div className="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Chi nhánh</h1>
-          <p className="text-sm text-slate-400">Quản lý danh sách chi nhánh GoodHair</p>
+          <h1 className="text-2xl font-bold text-white">Chi nhánh</h1>
         </div>
         {canCreate && (
           <button
@@ -505,9 +537,7 @@ export default function BranchClient() {
       </div>
 
       {/* Search */}
-      <div style={{ marginBottom: 24 }}>
-        <SearchBar placeholder="Tìm chi nhánh..." onSearch={setQuery} width={300} />
-      </div>
+      <FilterBar onSearch={setQuery} placeholder="Tìm chi nhánh" marginBottom={24} />
 
       {error && (
         <div className="mb-6 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">

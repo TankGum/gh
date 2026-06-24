@@ -28,6 +28,8 @@ class Branch(
     code: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
     address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     opening_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     closing_time: Mapped[time | None] = mapped_column(Time, nullable=True)

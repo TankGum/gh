@@ -22,6 +22,10 @@ class CustomerService:
         total = await self.repo.count_customers(q=q)
         return list(items), total
 
+    async def list_top_customers(self, *, limit: int = 20) -> list:
+        items = await self.repo.list_top_customers(limit=limit)
+        return list(items)
+
     async def sync_after_booking(
         self,
         *,

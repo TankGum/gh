@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Modal, Form, Input, InputNumber, Switch, Select, App, Space, Pagination } from 'antd';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import SearchBar from '@/components/ui/SearchBar';
+import FilterBar from '@/components/ui/FilterBar';
 import { HairService, ServiceCreatePayload, ServiceUpdatePayload, ServiceStatus } from '@/types/service.type';
 import { createService, fetchServices, updateService, deleteService } from '@/services/services.api';
 import { fetchBranches, type Branch } from '@/services/branches.api';
@@ -215,8 +215,7 @@ export default function ServiceClient() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4 }}>Dịch vụ & bảng giá</h1>
-          <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Quản lý danh mục dịch vụ và giá</p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4 }}>Dịch vụ</h1>
         </div>
         {canCreate && (
           <button
@@ -230,9 +229,7 @@ export default function ServiceClient() {
       </div>
 
       {/* Search */}
-      <div style={{ marginBottom: 24 }}>
-        <SearchBar placeholder="Tìm dịch vụ..." onSearch={(v) => { setQuery(v); setPage(1); }} width={300} />
-      </div>
+      <FilterBar onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Tìm dịch vụ" marginBottom={24} />
 
       {error && (
         <div style={{ marginBottom: 16, padding: '8px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, color: '#f87171', fontSize: 14 }}>

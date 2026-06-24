@@ -8,6 +8,8 @@ export interface PublicBranch {
   name: string;
   address: string | null;
   imageUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   openingTime: string | null; // "HH:MM:SS"
   closingTime: string | null;
   rating: number;
@@ -32,4 +34,11 @@ export interface PublicEmployee {
   avatarUrl: string | null;
   branchId: string | null;
   roleName: string | null;
+}
+
+export interface PublicCustomer {
+  id: string;
+  name: string;
+  totalVisits: number;
+  lastVisitDate: string | null;
 }

@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Tổng quan | GoodHair' };
 
 export default function DashboardPage() {
   return (
-    <div style={{ padding: 28 }}>
+    <div className="p-4 md:p-7">
       <DashboardClient />
     </div>
   );

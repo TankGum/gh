@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: 'Tài khoản | GoodHair' };
 
 export default function AccountsPage() {
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <AccountsClient />
     </div>
   );

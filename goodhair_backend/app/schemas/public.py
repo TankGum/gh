@@ -16,6 +16,8 @@ class PublicBranchRead(AppSchema):
     name: str
     address: str | None = None
     image_url: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     opening_time: datetime.time | None = None
     closing_time: datetime.time | None = None
     rating: float = 0
@@ -65,6 +67,13 @@ class PublicBookingRead(AppSchema):
 class PublicBookedWindow(AppSchema):
     start_minutes: int
     duration_minutes: int
+
+
+class PublicCustomerRead(AppSchema):
+    id: UUID
+    name: str
+    total_visits: int = 0
+    last_visit_date: datetime.date | None = None
 
 
 class PublicAvailableSlotsResponse(AppSchema):

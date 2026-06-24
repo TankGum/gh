@@ -6,6 +6,8 @@ export interface Branch {
   code: string | null;
   address: string | null;
   imageUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   openingTime: string | null; // "HH:MM:SS"
   closingTime: string | null;
   monthlyRevenue: number; // triệu đồng
@@ -22,6 +24,8 @@ export interface BranchCreatePayload {
   code?: string | null;
   address?: string | null;
   imageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   openingTime?: string | null;
   closingTime?: string | null;
   rating?: number;
