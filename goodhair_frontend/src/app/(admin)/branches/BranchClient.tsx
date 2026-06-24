@@ -86,6 +86,8 @@ function BranchForm({
   submitLabel,
   readonlyBarberCount,
   readonlyMonthlyRevenue,
+  errors,
+  onClearError,
 }: {
   form: BranchFormState;
   onChange: (patch: Partial<BranchFormState>) => void;
@@ -94,6 +96,8 @@ function BranchForm({
   submitLabel: string;
   readonlyBarberCount?: number;
   readonlyMonthlyRevenue?: number;
+  errors?: Record<string, string>;
+  onClearError?: (key: string) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -112,8 +116,16 @@ function BranchForm({
     }
   };
 
-  const inputCls =
-    'w-full bg-[#161e31] border border-slate-700/50 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500';
+  const inputCls = (key: string) =>
+    `w-full bg-[#161e31] border ${errors?.[key] ? 'border-red-500' : 'border-slate-700/50'} rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500`;
+
+  const change = (key: string, patch: Partial<BranchFormState>) => {
+    onClearError?.(key);
+    onChange(patch);
+  };
+
+  const Err = ({ k }: { k: string }) =>
+    errors?.[k] ? <p className="text-xs text-red-400 mt-1">{errors[k]}</p> : null;
 
   return (
     <form
@@ -164,68 +176,73 @@ function BranchForm({
         <label className="block text-sm text-slate-400 mb-1">Tên chi nhánh *</label>
         <input
           type="text"
-          required
           value={form.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          className={inputCls}
+          onChange={(e) => change('name', { name: e.target.value })}
+          className={inputCls('name')}
           placeholder="VD: Saigon Centre"
         />
+        <Err k="name" />
       </div>
 
       <div>
-        <label className="block text-sm text-slate-400 mb-1">Địa chỉ</label>
+        <label className="block text-sm text-slate-400 mb-1">Địa chỉ *</label>
         <input
           type="text"
           value={form.address}
-          onChange={(e) => onChange({ address: e.target.value })}
-          className={inputCls}
+          onChange={(e) => change('address', { address: e.target.value })}
+          className={inputCls('address')}
           placeholder="VD: 65 Lê Lợi, Quận 1"
         />
+        <Err k="address" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Vĩ độ (latitude)</label>
+          <label className="block text-sm text-slate-400 mb-1">Vĩ độ (latitude) *</label>
           <input
             type="number"
             step="any"
             value={form.latitude}
-            onChange={(e) => onChange({ latitude: e.target.value })}
-            className={inputCls}
+            onChange={(e) => change('latitude', { latitude: e.target.value })}
+            className={inputCls('latitude')}
             placeholder="VD: 10.7769"
           />
+          <Err k="latitude" />
         </div>
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Kinh độ (longitude)</label>
+          <label className="block text-sm text-slate-400 mb-1">Kinh độ (longitude) *</label>
           <input
             type="number"
             step="any"
             value={form.longitude}
-            onChange={(e) => onChange({ longitude: e.target.value })}
-            className={inputCls}
+            onChange={(e) => change('longitude', { longitude: e.target.value })}
+            className={inputCls('longitude')}
             placeholder="VD: 106.7009"
           />
+          <Err k="longitude" />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Giờ mở cửa</label>
+          <label className="block text-sm text-slate-400 mb-1">Giờ mở cửa *</label>
           <input
             type="time"
             value={form.openingTime}
-            onChange={(e) => onChange({ openingTime: e.target.value })}
-            className={inputCls}
+            onChange={(e) => change('openingTime', { openingTime: e.target.value })}
+            className={inputCls('openingTime')}
           />
+          <Err k="openingTime" />
         </div>
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Giờ đóng cửa</label>
+          <label className="block text-sm text-slate-400 mb-1">Giờ đóng cửa *</label>
           <input
             type="time"
             value={form.closingTime}
-            onChange={(e) => onChange({ closingTime: e.target.value })}
-            className={inputCls}
+            onChange={(e) => change('closingTime', { closingTime: e.target.value })}
+            className={inputCls('closingTime')}
           />
+          <Err k="closingTime" />
         </div>
       </div>
 
@@ -238,19 +255,21 @@ function BranchForm({
             max={5}
             step="0.1"
             value={form.rating}
-            onChange={(e) => onChange({ rating: e.target.value })}
-            className={inputCls}
+            onChange={(e) => change('rating', { rating: e.target.value })}
+            className={inputCls('rating')}
           />
+          <Err k="rating" />
         </div>
         <div>
-          <label className="block text-sm text-slate-400 mb-1">Số ghế</label>
+          <label className="block text-sm text-slate-400 mb-1">Số ghế *</label>
           <input
             type="number"
             min={0}
             value={form.seatCount}
-            onChange={(e) => onChange({ seatCount: e.target.value })}
-            className={inputCls}
+            onChange={(e) => change('seatCount', { seatCount: e.target.value })}
+            className={inputCls('seatCount')}
           />
+          <Err k="seatCount" />
         </div>
       </div>
 
@@ -435,10 +454,12 @@ export default function BranchClient() {
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<BranchFormState>(emptyForm);
   const [creating, setCreating] = useState(false);
+  const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
 
   const [editing, setEditing] = useState<Branch | null>(null);
   const [editForm, setEditForm] = useState<BranchFormState>(emptyForm);
   const [updating, setUpdating] = useState(false);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
   const [deletingBranch, setDeletingBranch] = useState<Branch | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -457,6 +478,7 @@ export default function BranchClient() {
   });
 
   const openEdit = (b: Branch) => {
+    setEditErrors({});
     setEditing(b);
     setEditForm({
       name: b.name,
@@ -472,13 +494,30 @@ export default function BranchClient() {
     });
   };
 
+  const validateBranch = (form: BranchFormState): Record<string, string> => {
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = 'Vui lòng nhập tên chi nhánh';
+    if (!form.address.trim()) errs.address = 'Vui lòng nhập địa chỉ';
+    if (!form.latitude.trim()) errs.latitude = 'Vui lòng nhập vĩ độ';
+    if (!form.longitude.trim()) errs.longitude = 'Vui lòng nhập kinh độ';
+    if (!form.openingTime) errs.openingTime = 'Vui lòng nhập giờ mở cửa';
+    if (!form.closingTime) errs.closingTime = 'Vui lòng nhập giờ đóng cửa';
+    if (!form.seatCount || Number(form.seatCount) <= 0) errs.seatCount = 'Số ghế phải lớn hơn 0';
+    if (form.rating && (Number(form.rating) < 0 || Number(form.rating) > 5)) errs.rating = 'Đánh giá từ 0-5';
+    return errs;
+  };
+
   const handleCreate = async () => {
+    const errs = validateBranch(createForm);
+    setCreateErrors(errs);
+    if (Object.keys(errs).length > 0) return;
     setCreating(true);
     setError(null);
     try {
       await createBranch(buildPayload(createForm));
       setShowCreate(false);
       setCreateForm(emptyForm);
+      setCreateErrors({});
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Tạo chi nhánh thất bại.');
@@ -489,12 +528,16 @@ export default function BranchClient() {
 
   const handleUpdate = async () => {
     if (!editing) return;
+    const errs = validateBranch(editForm);
+    setEditErrors(errs);
+    if (Object.keys(errs).length > 0) return;
     setUpdating(true);
     setError(null);
     try {
       const payload: BranchUpdatePayload = buildPayload(editForm);
       await updateBranch(editing.id, payload);
       setEditing(null);
+      setEditErrors({});
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Cập nhật chi nhánh thất bại.');
@@ -527,7 +570,7 @@ export default function BranchClient() {
         </div>
         {canCreate && (
           <button
-            onClick={() => { setCreateForm(emptyForm); setShowCreate(true); }}
+            onClick={() => { setCreateForm(emptyForm); setCreateErrors({}); setShowCreate(true); }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EE8A33', border: 'none', color: '#0B1620', padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
           >
             <Plus size={15} />
@@ -566,18 +609,20 @@ export default function BranchClient() {
       )}
 
       {/* Create Modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Thêm chi nhánh">
+      <Modal open={showCreate} onClose={() => { setShowCreate(false); setCreateErrors({}); }} title="Thêm chi nhánh">
         <BranchForm
           form={createForm}
           onChange={(patch) => setCreateForm((prev) => ({ ...prev, ...patch }))}
           onSubmit={handleCreate}
           submitting={creating}
           submitLabel="Thêm mới"
+          errors={createErrors}
+          onClearError={(key) => setCreateErrors(prev => ({ ...prev, [key]: '' }))}
         />
       </Modal>
 
       {/* Edit Modal */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Chỉnh sửa chi nhánh">
+      <Modal open={!!editing} onClose={() => { setEditing(null); setEditErrors({}); }} title="Chỉnh sửa chi nhánh">
         {editing && (
           <BranchForm
             form={editForm}
@@ -587,6 +632,8 @@ export default function BranchClient() {
             submitLabel="Lưu thay đổi"
             readonlyBarberCount={editing.barberCount}
             readonlyMonthlyRevenue={editing.monthlyRevenue}
+            errors={editErrors}
+            onClearError={(key) => setEditErrors(prev => ({ ...prev, [key]: '' }))}
           />
         )}
       </Modal>

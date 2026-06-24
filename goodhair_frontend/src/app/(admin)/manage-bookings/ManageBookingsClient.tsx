@@ -85,6 +85,8 @@ export default function ManageBookingsClient() {
   const [modalData, setModalData] = useState<Partial<Booking> | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [tooltipData, setTooltipData] = useState<{ b: Booking; timeRange: string; svcNames: string; x: number; y: number } | null>(null);
 
   const todayDate = new Date();
   const weekDates = Array.from({ length: 61 }, (_, i) => addDays(toISODate(new Date(todayDate.getTime() - 30 * 86400000)), i));
@@ -185,6 +187,7 @@ export default function ManageBookingsClient() {
   };
 
   const openAdd = (employeeId?: string, branchId?: string, date?: string, startTime?: string) => {
+    setFormErrors({});
     setModalData({
       employeeId: employeeId || null,
       branchId: branchId || (branchFilter !== 'all' ? branchFilter : null),
@@ -201,12 +204,29 @@ export default function ManageBookingsClient() {
   };
 
   const openEdit = (booking: Booking) => {
+    setFormErrors({});
     setModalData({ ...booking });
     setModalMode('edit');
   };
 
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!modalData?.customerName?.trim()) errs.customerName = 'Vui lòng nhập tên khách hàng';
+    if (!modalData?.customerPhone?.trim()) errs.customerPhone = 'Vui lòng nhập số điện thoại';
+    else if (modalData.customerPhone.trim().length < 8) errs.customerPhone = 'Số điện thoại không hợp lệ';
+    if (!modalData?.branchId) errs.branchId = 'Vui lòng chọn chi nhánh';
+    if (!modalData?.employeeId) errs.employeeId = 'Vui lòng chọn barber';
+    if (!modalData?.date) errs.date = 'Vui lòng chọn ngày';
+    if (!modalData?.startTime) errs.startTime = 'Vui lòng chọn giờ';
+    if (!modalData?.serviceIds?.length) errs.serviceIds = 'Vui lòng chọn ít nhất một dịch vụ';
+    if (!modalData?.total || modalData.total <= 0) errs.total = 'Tổng tiền phải lớn hơn 0';
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSave = async () => {
     if (!modalData) return;
+    if (!validate()) return;
     setSubmitting(true);
     try {
       if (modalMode === 'add') {
@@ -219,6 +239,7 @@ export default function ManageBookingsClient() {
       }
       setModalMode(null);
       setModalData(null);
+      setFormErrors({});
       await refresh();
       refreshBadges();
     } catch (e) {
@@ -425,6 +446,9 @@ export default function ManageBookingsClient() {
                           return (
                             <div
                               key={b.id}
+                              onMouseEnter={(e) => setTooltipData({ b, timeRange, svcNames, x: e.clientX, y: e.clientY })}
+                              onMouseMove={(e) => setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
+                              onMouseLeave={() => setTooltipData(null)}
                               onClick={() => !completed && openEdit(b)}
                               style={{ position: 'absolute', left: 6, right: 6, overflow: 'hidden', cursor: completed ? 'default' : 'pointer', borderRadius: 6, padding: '7px 9px', top, height: h, background: completed ? '#1a2a38' : '#15293b', borderLeft: `3px solid ${accent}`, boxShadow: '0 4px 12px rgba(0,0,0,.3)', opacity: faded ? 0.55 : 1 }}
                             >
@@ -457,7 +481,7 @@ export default function ManageBookingsClient() {
       {/* Add/Edit modal */}
       <Modal
         open={!!modalMode}
-        onClose={() => { setModalMode(null); setModalData(null); }}
+        onClose={() => { setModalMode(null); setModalData(null); setFormErrors({}); }}
         title={modalMode === 'add' ? 'Tạo lịch hẹn' : 'Sửa lịch hẹn'}
       >
         {modalData && (
@@ -467,18 +491,20 @@ export default function ManageBookingsClient() {
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Tên khách hàng</label>
               <input
                 value={modalData.customerName || ''}
-                onChange={e => setModalData({ ...modalData, customerName: e.target.value })}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none' }}
+                onChange={e => { setFormErrors(prev => ({ ...prev, customerName: '' })); setModalData({ ...modalData, customerName: e.target.value }); }}
+                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.customerName ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none' }}
               />
+              {formErrors.customerName && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerName}</span>}
             </div>
             {/* Phone */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Số điện thoại</label>
               <input
                 value={modalData.customerPhone || ''}
-                onChange={e => setModalData({ ...modalData, customerPhone: e.target.value })}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none' }}
+                onChange={e => { setFormErrors(prev => ({ ...prev, customerPhone: '' })); setModalData({ ...modalData, customerPhone: e.target.value }); }}
+                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.customerPhone ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none' }}
               />
+              {formErrors.customerPhone && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerPhone}</span>}
             </div>
             {/* Services */}
             <div style={{ marginBottom: 16 }}>
@@ -487,6 +513,7 @@ export default function ManageBookingsClient() {
                 mode="multiple"
                 value={modalData.serviceIds || []}
                 onChange={(ids: string[]) => {
+                  setFormErrors(prev => ({ ...prev, serviceIds: '' }));
                   const total = ids.reduce((sum, sid) => sum + (serviceMap.get(sid)?.price || 0), 0);
                   const dur = ids.reduce((sum, sid) => sum + (serviceMap.get(sid)?.durationMinutes || 0), 0);
                   setModalData({ ...modalData, serviceIds: ids, total, durationMinutes: dur });
@@ -495,30 +522,33 @@ export default function ManageBookingsClient() {
                 placeholder="Chọn dịch vụ"
                 options={serviceOpts}
               />
+              {formErrors.serviceIds && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.serviceIds}</span>}
             </div>
             {/* Branch */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Chi nhánh</label>
               <select
                 value={modalData.branchId || ''}
-                onChange={e => { const branchId = e.target.value || null; setModalData({ ...modalData, branchId, employeeId: null }); }}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
+                onChange={e => { setFormErrors(prev => ({ ...prev, branchId: '' })); const branchId = e.target.value || null; setModalData({ ...modalData, branchId, employeeId: null }); }}
+                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.branchId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
               >
                 <option value="">Chọn chi nhánh</option>
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
+              {formErrors.branchId && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.branchId}</span>}
             </div>
             {/* Barber */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Barber</label>
               <select
                 value={modalData.employeeId || ''}
-                onChange={e => setModalData({ ...modalData, employeeId: e.target.value || null })}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
+                onChange={e => { setFormErrors(prev => ({ ...prev, employeeId: '' })); setModalData({ ...modalData, employeeId: e.target.value || null }); }}
+                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.employeeId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
               >
                 <option value="">Chọn barber</option>
                 {modalBarberOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+              {formErrors.employeeId && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.employeeId}</span>}
             </div>
             {/* Date */}
             <div style={{ marginBottom: 16 }}>
@@ -529,24 +559,27 @@ export default function ManageBookingsClient() {
                 min={today}
                 max={maxDate}
                 onChange={e => {
+                  setFormErrors(prev => ({ ...prev, date: '' }));
                   const val = e.target.value;
                   if (val < today) return setModalData({ ...modalData, date: today });
                   if (val > maxDate) return setModalData({ ...modalData, date: maxDate });
                   setModalData({ ...modalData, date: val });
                 }}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', colorScheme: 'dark' }}
+                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.date ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', colorScheme: 'dark' }}
               />
+              {formErrors.date && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.date}</span>}
             </div>
             {/* Start time */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Giờ bắt đầu</label>
               <select
                 value={modalData.startTime || '09:00'}
-                onChange={e => setModalData({ ...modalData, startTime: e.target.value })}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
+                onChange={e => { setFormErrors(prev => ({ ...prev, startTime: '' })); setModalData({ ...modalData, startTime: e.target.value }); }}
+                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.startTime ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
               >
                 {modalSlotOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+              {formErrors.startTime && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.startTime}</span>}
             </div>
             {/* Status */}
             <div style={{ marginBottom: 16 }}>
@@ -563,16 +596,16 @@ export default function ManageBookingsClient() {
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Tổng (₫)</label>
               <input
-                type="number"
-                value={modalData.total || 0}
-                onChange={e => setModalData({ ...modalData, total: parseInt(e.target.value) || 0 })}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none' }}
+                type="text"
+                readOnly
+                value={formatCurrency(modalData.total || 0)}
+                style={{ width: '100%', background: '#0a151f', border: '1px solid rgba(238,138,51,.15)', color: '#EE8A33', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, outline: 'none', cursor: 'not-allowed' }}
               />
             </div>
             {/* Buttons */}
             <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
               <button
-                onClick={() => { setModalMode(null); setModalData(null); }}
+                onClick={() => { setModalMode(null); setModalData(null); setFormErrors({}); }}
                 style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
                 Huỷ
@@ -607,6 +640,23 @@ export default function ManageBookingsClient() {
           </div>
         </div>
       </Modal>
+
+      {/* Tooltip */}
+      {tooltipData && (
+        <div style={{
+          position: 'fixed', left: tooltipData.x + 12, top: tooltipData.y - 10,
+          transform: 'translateY(-100%)', zIndex: 9999,
+          background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', borderRadius: 8,
+          padding: '10px 14px', minWidth: 220,
+          pointerEvents: 'none', boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#F1ECE1', marginBottom: 4 }}>{tooltipData.b.customerName}</div>
+          <div style={{ fontSize: 11, color: 'rgba(241,236,225,.5)', marginBottom: 2 }}>{tooltipData.b.customerPhone}</div>
+          <div style={{ fontSize: 11, color: 'rgba(241,236,225,.5)', marginBottom: 2 }}>{tooltipData.b.date} · {tooltipData.timeRange}</div>
+          {tooltipData.svcNames && <div style={{ fontSize: 11, color: 'rgba(241,236,225,.5)' }}>{tooltipData.svcNames}</div>}
+          <div style={{ fontSize: 11, color: '#EE8A33', marginTop: 4, fontWeight: 600 }}>{formatShort(tooltipData.b.total)}</div>
+        </div>
+      )}
     </div>
   );
 }

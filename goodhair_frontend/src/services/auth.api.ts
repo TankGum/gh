@@ -60,6 +60,11 @@ export async function fetchPendingAccountsCount(): Promise<number> {
   return data.total;
 }
 
+export async function fetchPendingAccounts(): Promise<Account[]> {
+  const data = await apiFetch<PaginatedAccounts>(`/accounts?status=pending&size=50`);
+  return data.items;
+}
+
 export async function approveAccount(id: string): Promise<Account> {
   return apiFetch<Account>(`/accounts/${id}/approve`, { method: 'PATCH' });
 }

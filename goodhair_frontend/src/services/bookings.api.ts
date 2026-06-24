@@ -67,3 +67,8 @@ export async function fetchPendingBookingsCount(): Promise<number> {
   const data = await apiFetch<PaginatedResponse<Booking>>(`/bookings?status=pending&size=1`);
   return data.total;
 }
+
+export async function fetchPendingBookings(): Promise<Booking[]> {
+  const data = await apiFetch<PaginatedResponse<Booking>>(`/bookings?status=pending&size=50&sort_by=date&sort_order=asc`);
+  return data.items;
+}

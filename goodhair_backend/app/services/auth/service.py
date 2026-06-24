@@ -37,28 +37,38 @@ class AuthService:
         account = await self.account_repo.get_by_google_id(google_info["google_id"])
 
         if account is None:
-            total = await self.account_repo.count_total()
-            status = AccountStatus.APPROVED if total == 0 else AccountStatus.PENDING
-            account = await self.account_repo.create(
-                {**google_info, "status": status, "requested_at": datetime.now(timezone.utc)}
-            )
-            if status == AccountStatus.APPROVED:
-                admin_role = await self.role_repo.get_system_role()
-                await self.employee_repo.create(
-                    {
-                        "account_id": account.id,
-                        "name": account.name,
-                        "email": account.email,
-                        "avatar_url": account.avatar_url,
-                        "role_id": admin_role.id if admin_role else None,
-                    }
-                )
-            else:
+            deleted = await self.account_repo.get_deleted_by_google_id(google_info["google_id"])
+            if deleted is not None:
+                await self.account_repo.restore(deleted)
+                await self.account_repo.update_status(deleted, AccountStatus.PENDING)
+                employee = await self.employee_repo.get_deleted_by_account_id(deleted.id)
+                if employee is not None:
+                    await self.employee_repo.restore(employee)
                 await self.account_repo.session.commit()
-                raise ForbiddenError(
-                    message_key="errors.auth.pending",
-                    detail={"status": "pending"},
+                account = deleted
+            else:
+                total = await self.account_repo.count_total()
+                status = AccountStatus.APPROVED if total == 0 else AccountStatus.PENDING
+                account = await self.account_repo.create(
+                    {**google_info, "status": status, "requested_at": datetime.now(timezone.utc)}
                 )
+                if status == AccountStatus.APPROVED:
+                    admin_role = await self.role_repo.get_system_role()
+                    await self.employee_repo.create(
+                        {
+                            "account_id": account.id,
+                            "name": account.name,
+                            "email": account.email,
+                            "avatar_url": account.avatar_url,
+                            "role_id": admin_role.id if admin_role else None,
+                        }
+                    )
+                else:
+                    await self.account_repo.session.commit()
+                    raise ForbiddenError(
+                        message_key="errors.auth.pending",
+                        detail={"status": "pending"},
+                    )
 
         if account.status == AccountStatus.PENDING:
             raise ForbiddenError(

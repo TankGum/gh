@@ -19,6 +19,22 @@ class AccountRepository(BaseRepository[Account]):
             )
         )
 
+    async def get_deleted_by_google_id(self, google_id: str) -> Account | None:
+        return await self.session.scalar(
+            select(Account).where(
+                Account.google_id == google_id,
+                Account.deleted_at.is_not(None),
+            )
+        )
+
+    async def restore(self, account: Account) -> None:
+        account.mark_restored()
+        await self.session.flush()
+
+    async def update_status(self, account: Account, status: AccountStatus) -> None:
+        account.status = status
+        await self.session.flush()
+
     async def get_active_by_id(self, id_: UUID) -> Account | None:
         return await self.session.scalar(
             select(Account).where(

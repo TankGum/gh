@@ -25,7 +25,6 @@ class RoleService:
 
     async def create(self, data: RoleCreate) -> Role:
         payload = data.model_dump()
-        payload["permissions"] = self._apply_default_view(payload["permissions"])
         role = await self.repo.create(payload)
         await self.activity.log(
             ActivityAction.CREATE,
@@ -35,21 +34,6 @@ class RoleService:
             target_label=role.name,
         )
         return role
-
-    @staticmethod
-    def _apply_default_view(
-        permissions: dict[str, dict[str, bool]],
-    ) -> dict[str, dict[str, bool]]:
-        """Mọi role mới đều mặc định có quyền view ở tất cả module."""
-        result: dict[str, dict[str, bool]] = {}
-        for module in PermissionModule:
-            perm = dict(permissions.get(module.value, {}))
-            perm.setdefault("create", False)
-            perm.setdefault("edit", False)
-            perm.setdefault("delete", False)
-            perm["view"] = True
-            result[module.value] = perm
-        return result
 
     async def update(self, role_id: UUID, data: RoleUpdate) -> Role:
         role = await self._get_or_404(role_id)

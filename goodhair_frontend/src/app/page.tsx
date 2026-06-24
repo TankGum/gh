@@ -47,6 +47,10 @@ export default function HomePage() {
   const [topCustomers, setTopCustomers] = useState<PublicCustomer[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearestBranchId, setNearestBranchId] = useState<string | null>(null);
+  const [nearestDistance, setNearestDistance] = useState<number | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
 
   // Scroll listener for sticky header
@@ -67,6 +71,47 @@ export default function HomePage() {
       .finally(() => setServicesLoading(false));
   }, []);
 
+  // Get user location
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation không được hỗ trợ');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      err => setLocationError(err.message),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, []);
+
+  // Find nearest branch when location & branches are ready
+  useEffect(() => {
+    if (!userLocation || branchesList.length === 0) return;
+    const branchesWithCoords = branchesList.filter(b => b.latitude != null && b.longitude != null);
+    if (branchesWithCoords.length === 0) return;
+
+    const deg2rad = (d: number) => d * Math.PI / 180;
+    const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+      const R = 6371;
+      const dLat = deg2rad(lat2 - lat1);
+      const dLng = deg2rad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2
+              + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2))
+              * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    let nearest = branchesWithCoords[0];
+    let minDist = haversine(userLocation.lat, userLocation.lng, nearest.latitude!, nearest.longitude!);
+    for (let i = 1; i < branchesWithCoords.length; i++) {
+      const b = branchesWithCoords[i];
+      const d = haversine(userLocation.lat, userLocation.lng, b.latitude!, b.longitude!);
+      if (d < minDist) { minDist = d; nearest = b; }
+    }
+    setNearestBranchId(nearest.id);
+    setNearestDistance(Math.round(minDist * 10) / 10);
+  }, [userLocation, branchesList]);
+
   // Fetch branches
   useEffect(() => {
     fetchPublicBranches({ size: 20 })
@@ -85,7 +130,7 @@ export default function HomePage() {
 
   // Fetch top customers
   useEffect(() => {
-    fetchPublicTopCustomers(5)
+    fetchPublicTopCustomers(12)
       .then(setTopCustomers)
       .catch(() => {});
   }, []);
@@ -140,9 +185,11 @@ export default function HomePage() {
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
           {/* Logo */}
-          <a href="#top" style={{ textDecoration: 'none', display: 'flex', alignItems: 'baseline', flexShrink: 0 }}>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 22, letterSpacing: '.04em', color: '#F1ECE1' }}>GOOD</span>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 22, letterSpacing: '.04em', color: '#EE8A33' }}>HAIR</span>
+          <a href="#top" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <img src="/logo/logo.jpg" alt="GOODHAIR" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />
+            <div style={{ display: 'flex' }}>
+              <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 22, letterSpacing: '.04em', color: '#F1ECE1' }}>GOOD</span><span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 22, letterSpacing: '.04em', color: '#EE8A33' }}>HAIR</span>
+            </div>
           </a>
 
           {/* Desktop nav */}
@@ -608,8 +655,15 @@ export default function HomePage() {
                       <div style={{ width: 52, height: 34, background: 'rgba(241,236,225,.08)', borderRadius: 2, flexShrink: 0 }} />
                     </div>
                   ))
-                : branchesList.map(branch => (
-                    <div key={branch.id} style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '18px 20px', background: '#0F1E2B', border: '1px solid rgba(238,138,51,.16)', borderRadius: 3 }}>
+                : branchesList.map(branch => {
+                    const isNearest = nearestBranchId === branch.id;
+                    return (
+                      <div key={branch.id} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 18, padding: '18px 20px', background: isNearest ? 'rgba(238,138,51,.08)' : '#0F1E2B', border: `1px solid ${isNearest ? 'rgba(238,138,51,.5)' : 'rgba(238,138,51,.16)'}`, borderRadius: 3 }}>
+                      {isNearest && (
+                        <div style={{ position: 'absolute', top: -1, left: 14, fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#EE8A33', background: '#0F1E2B', padding: '2px 8px' }}>
+                          {t(`Gần bạn nhất · ${nearestDistance} km`, `Nearest · ${nearestDistance} km`)}
+                        </div>
+                      )}
                       {/* Ảnh chi nhánh */}
                       <div style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 4, overflow: 'hidden', background: 'rgba(238,138,51,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {branch.imageUrl
@@ -636,7 +690,8 @@ export default function HomePage() {
                         {t('Đặt', 'Book')}
                       </Link>
                     </div>
-                  ))}
+                    );
+                  })}
             </div>
           </div>
         </div>
@@ -653,30 +708,105 @@ export default function HomePage() {
             </div>
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(32px,4.6vw,56px)', lineHeight: 1.05 }}>{t('Khách quen của chúng tôi.', 'Our most loyal clients.')}</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16 }}>
-            {topCustomers.map(c => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
-                <span style={{ width: 42, height: 42, borderRadius: '50%', background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display', serif", color: '#EE8A33', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                  {c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
-                </span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{c.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(21,17,12,.55)', marginTop: 2 }}>
-                    {t(`${c.totalVisits} lần ghé`, `${c.totalVisits} visits`)}
+
+          {topCustomers.length > 0 && (
+            <>
+              {/* Top 1 */}
+              <div style={{ textAlign: 'center', marginBottom: 32 }}>
+                <div style={{
+                  display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+                  padding: '32px 48px', background: 'linear-gradient(135deg,#FFF9E6,#FFF3CC)',
+                  border: '2px solid #D4A843', borderRadius: 12, boxShadow: '0 8px 32px rgba(212,168,67,.18)',
+                  position: 'relative',
+                }}>
+                  <div style={{
+                    position: 'absolute', top: -14, left: '50%', marginLeft: -36,
+                    background: '#D4A843', color: '#fff', padding: '4px 16px', borderRadius: 20,
+                    fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
+                  }}>TOP 1</div>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: '50%', background: '#16110C',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: "'Playfair Display', serif", color: '#D4A843', fontWeight: 700, fontSize: 22,
+                  }}>
+                    {topCustomers[0].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
+                  <div style={{ fontWeight: 800, fontSize: 20, color: '#15110C' }}>{topCustomers[0].name}</div>
+                  <div style={{ fontSize: 14, color: 'rgba(21,17,12,.5)' }}>{t(`${topCustomers[0].totalVisits} lần ghé`, `${topCustomers[0].totalVisits} visits`)}</div>
                 </div>
               </div>
-            ))}
-            {topCustomers.length === 0 && Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'rgba(21,17,12,.06)' }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ width: '60%', height: 14, background: 'rgba(21,17,12,.06)', borderRadius: 2 }} />
-                  <div style={{ width: '35%', height: 11, background: 'rgba(21,17,12,.04)', borderRadius: 2, marginTop: 6 }} />
+
+              {/* Top 2 & 3 */}
+              {topCustomers.length > 1 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 600, margin: '0 auto 40px' }}>
+                  {[{ rank: 2, label: 'TOP 2', accent: '#9CA3AF', bg: 'linear-gradient(135deg,#F3F4F6,#E5E7EB)', shadow: 'rgba(156,163,175,.18)' },
+                    { rank: 3, label: 'TOP 3', accent: '#CD7F4B', bg: 'linear-gradient(135deg,#FFF5ED,#FFE8D6)', shadow: 'rgba(205,127,75,.18)' },
+                  ].map(({ rank, label, accent, bg, shadow }) => {
+                    const c = topCustomers[rank - 1];
+                    if (!c) return null;
+                    return (
+                      <div key={c.id} style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+                        padding: '24px 20px', background: bg, border: `2px solid ${accent}`, borderRadius: 10,
+                        boxShadow: `0 6px 24px ${shadow}`, position: 'relative',
+                      }}>
+                        <div style={{
+                          position: 'absolute', top: -12, left: '50%', marginLeft: -32,
+                          background: accent, color: '#fff', padding: '3px 14px', borderRadius: 20,
+                          fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
+                        }}>{label}</div>
+                        <div style={{
+                          width: 56, height: 56, borderRadius: '50%', background: '#16110C',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: "'Playfair Display', serif", color: accent, fontWeight: 700, fontSize: 17,
+                        }}>
+                          {c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: '#15110C' }}>{c.name}</div>
+                        <div style={{ fontSize: 13, color: 'rgba(21,17,12,.5)' }}>{t(`${c.totalVisits} lần ghé`, `${c.totalVisits} visits`)}</div>
+                      </div>
+                    );
+                  })}
                 </div>
+              )}
+
+              {/* Rest */}
+              {topCustomers.length > 3 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 14 }}>
+                  {topCustomers.slice(3).map(c => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
+                      <span style={{ width: 38, height: 38, borderRadius: '50%', background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display', serif", color: '#EE8A33', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                        {c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{c.name}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(21,17,12,.55)', marginTop: 2 }}>{t(`${c.totalVisits} lần ghé`, `${c.totalVisits} visits`)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {topCustomers.length === 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(21,17,12,.06)' }} />
+              <div style={{ width: 160, height: 20, background: 'rgba(21,17,12,.06)', borderRadius: 4 }} />
+              <div style={{ width: 100, height: 14, background: 'rgba(21,17,12,.04)', borderRadius: 4 }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: 400, marginTop: 16 }}>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(21,17,12,.06)' }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ width: '60%', height: 13, background: 'rgba(21,17,12,.06)', borderRadius: 2 }} />
+                      <div style={{ width: '35%', height: 10, background: 'rgba(21,17,12,.04)', borderRadius: 2, marginTop: 5 }} />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </section></AnimatedSection>
 

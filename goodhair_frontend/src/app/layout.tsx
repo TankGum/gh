@@ -10,6 +10,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "GoodHair - Quản lý hệ thống",
   description: "Hệ thống quản lý chuỗi cắt tóc GoodHair",
+  icons: {
+    icon: "/logo/logo.jpg",
+    apple: "/logo/logo.jpg",
+  },
 };
 
 export default function RootLayout({

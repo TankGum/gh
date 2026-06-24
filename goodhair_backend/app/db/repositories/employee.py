@@ -20,6 +20,18 @@ class EmployeeRepository(BaseRepository[Employee]):
             )
         )
 
+    async def get_deleted_by_account_id(self, account_id: UUID) -> Employee | None:
+        return await self.session.scalar(
+            select(Employee).where(
+                Employee.account_id == account_id,
+                Employee.deleted_at.is_not(None),
+            )
+        )
+
+    async def restore(self, employee: Employee) -> None:
+        employee.mark_restored()
+        await self.session.flush()
+
     async def list_employees(
         self,
         *,

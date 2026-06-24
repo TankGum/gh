@@ -40,6 +40,9 @@ class SoftDeleteMixin:
     def mark_deleted(self) -> None:
         self.deleted_at = datetime.utcnow()
 
+    def mark_restored(self) -> None:
+        self.deleted_at = None
+
 
 class AuditMixin:
     created_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True), nullable=True)

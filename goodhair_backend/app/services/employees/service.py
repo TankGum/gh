@@ -9,6 +9,7 @@ from app.core.constants import (
 )
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.db.repositories.branch import BranchRepository
+from app.db.repositories.account import AccountRepository
 from app.db.repositories.employee import EmployeeRepository
 from app.db.repositories.role import RoleRepository
 from app.models.employee import Employee
@@ -23,6 +24,7 @@ class EmployeeService:
         self.repo = EmployeeRepository(session)
         self.role_repo = RoleRepository(session)
         self.branch_repo = BranchRepository(session)
+        self.account_repo = AccountRepository(session)
         self.activity = ActivityLogService(session)
 
     async def list_employees(
@@ -150,6 +152,9 @@ class EmployeeService:
         employee = await self._get_or_404(employee_id)
         avatar_url = employee.avatar_url
         await self.repo.soft_delete(employee)
+        account = await self.account_repo.get_by_id(employee.account_id)
+        if account and account.deleted_at is None:
+            await self.account_repo.soft_delete(account)
         await self.activity.log(
             ActivityAction.DELETE,
             PermissionModule.STAFF,

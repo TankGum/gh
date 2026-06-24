@@ -59,8 +59,10 @@ export default function Sidebar() {
   const router = useRouter();
   const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useSidebar();
   const { account, logout, canView } = useAuth();
-  const { pendingBookings, pendingAccounts } = useBadge();
+  const { pendingBookings, pendingAccounts, pendingBookingsList, pendingAccountsList } = useBadge();
   const [hovered, setHovered] = useState<string | null>(null);
+  const [badgeHovered, setBadgeHovered] = useState<string | null>(null);
+  const [badgePos, setBadgePos] = useState({ x: 0, y: 0 });
   const isMobile = useIsMobile();
 
   const handleLogout = async () => {
@@ -214,13 +216,53 @@ export default function Sidebar() {
 
                       {badge ? (
                         effectiveCollapsed ? (
-                          <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: '#ee8a33', boxShadow: '0 0 0 2px #0b1620' }} />
+                          <span onMouseEnter={(e) => { setBadgePos({ x: e.clientX, y: e.clientY }); setBadgeHovered(item.key); }} onMouseMove={(e) => setBadgePos({ x: e.clientX, y: e.clientY })} onMouseLeave={() => setBadgeHovered(null)} style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: '#ee8a33', boxShadow: '0 0 0 2px #0b1620' }} />
                         ) : (
-                          <span style={{ background: '#ee8a33', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, lineHeight: '16px', flexShrink: 0 }}>
+                          <span onMouseEnter={(e) => { setBadgePos({ x: e.clientX, y: e.clientY }); setBadgeHovered(item.key); }} onMouseMove={(e) => setBadgePos({ x: e.clientX, y: e.clientY })} onMouseLeave={() => setBadgeHovered(null)} style={{ background: '#ee8a33', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 10, lineHeight: '16px', flexShrink: 0 }}>
                             {badge}
                           </span>
                         )
                       ) : null}
+                      {(() => {
+                        const showBookings = badgeHovered === '/manage-bookings' && !effectiveCollapsed && item.key === '/manage-bookings' && pendingBookingsList.length > 0;
+                        const showAccounts = badgeHovered === '/accounts' && !effectiveCollapsed && item.key === '/accounts' && pendingAccountsList.length > 0;
+                        if (!showBookings && !showAccounts) return null;
+                        const list = showBookings ? pendingBookingsList : pendingAccountsList;
+                        const label = showBookings ? 'lịch chờ xác nhận' : 'tài khoản chờ duyệt';
+                        const above = badgePos.y > 280;
+                        return (
+                          <div style={{
+                            position: 'fixed', left: badgePos.x - 130,
+                            top: above ? badgePos.y - 12 : badgePos.y + 12,
+                            transform: above ? 'translateY(-100%)' : 'translateY(0)',
+                            background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', borderRadius: 8,
+                            padding: '10px 0', minWidth: 260, zIndex: 9999,
+                            boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+                            maxHeight: 300, overflowY: 'auto',
+                          }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(241,236,225,.45)', textTransform: 'uppercase', letterSpacing: '.06em', padding: '0 14px 8px', borderBottom: '1px solid rgba(238,138,51,.1)' }}>
+                              {list.length} {label}
+                            </div>
+                            {list.map((item: any) => {
+                              const isBooking = showBookings;
+                              const name = isBooking ? (item as any).customerName : (item as any).name;
+                              const sub = isBooking
+                                ? `${(item as any).customerPhone} · ${(item as any).date} · ${(item as any).startTime?.slice(0, 5)}`
+                                : (item as any).email;
+                              return (
+                                <div key={item.id} style={{ padding: '8px 14px', borderBottom: '1px solid rgba(238,138,51,.06)', cursor: 'pointer' }}
+                                  onClick={() => { setBadgeHovered(null); router.push(isBooking ? '/manage-bookings' : '/accounts'); }}
+                                  onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'rgba(238,138,51,.08)'}
+                                  onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}
+                                >
+                                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#F1ECE1' }}>{name}</div>
+                                  <div style={{ fontSize: 11, color: 'rgba(241,236,225,.5)', marginTop: 2 }}>{sub}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
