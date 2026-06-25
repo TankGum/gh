@@ -7,6 +7,8 @@ như doanh thu (monthly_revenue / total_revenue), email, account_id...
 import datetime
 from uuid import UUID
 
+from pydantic import Field
+
 from app.core.constants import BranchStatus
 from app.schemas.base import AppSchema
 
@@ -45,15 +47,24 @@ class PublicEmployeeRead(AppSchema):
 
 
 class PublicBookingCreate(AppSchema):
-    customer_name: str
-    customer_phone: str
-    employee_id: UUID | None = None
-    branch_id: UUID | None = None
+    customer_name: str = Field(..., min_length=2)
+    customer_phone: str = Field(..., min_length=8)
+    employee_id: UUID
+    branch_id: UUID
     date: datetime.date
     start_time: datetime.time
-    duration_minutes: int = 0
-    total: int = 0
-    service_ids: list[UUID] = []
+    duration_minutes: int = Field(..., gt=0)
+    total: int = Field(..., ge=0)
+    service_ids: list[UUID] = Field(..., min_length=1)
+
+
+class PublicStatsResponse(AppSchema):
+    branches: int
+    services: int
+    barbers: int
+    customers: int
+    years_in_business: int
+    contact_phone: str
 
 
 class PublicBookingRead(AppSchema):

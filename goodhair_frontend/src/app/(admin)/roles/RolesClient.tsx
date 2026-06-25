@@ -8,6 +8,7 @@ import { fetchRoles, createRole, updateRole, deleteRole } from '@/services/roles
 import type { Role, PermissionMap, RoleCreatePayload, RoleUpdatePayload } from '@/types/role.type';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 const PERM_MODULES = [
   { key: 'overview', label: 'Tổng quan' },
@@ -77,6 +78,7 @@ export default function RolesClient() {
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+  const isMobile = useIsMobile();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -226,7 +228,7 @@ export default function RolesClient() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '340px 1fr', gap: 20, alignItems: 'start' }}>
           {/* Left: Role list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
             <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 2 }}>

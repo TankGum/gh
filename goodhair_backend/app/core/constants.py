@@ -73,4 +73,8 @@ class ActivityAction(StrEnum):
     LOGIN = "login"
 
 
+FOUNDING_YEAR = 2024
+HAPPY_CLIENTS = 120000
+CONTACT_PHONE = "034 989 4039"
+
 # Key của role quản trị viên (seed trong migration f896a4d51529).

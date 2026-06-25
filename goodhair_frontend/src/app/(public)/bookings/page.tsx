@@ -211,8 +211,8 @@ export default function HomePage() {
       const result = await createPublicBooking({
         customerName: name,
         customerPhone: phone,
-        employeeId: barberId,
-        branchId,
+        employeeId: barberId!,
+        branchId: branchId!,
         date: date!,
         startTime: time!,
         durationMinutes: durMin,
@@ -299,26 +299,36 @@ export default function HomePage() {
       {/* STEPPER */}
       <div style={styles.stepper}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 0 }}>
-          {stepItems.map((st, i) => (
-            <div key={i} className="bk-step-item" style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{
-                  width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0,
-                  ...((st.active || st.done)
-                    ? { background: styles.accent, color: '#0B1620' }
-                    : { background: 'transparent', color: 'rgba(241,236,225,.45)', border: '1px solid rgba(238,138,51,.3)' }),
-                }}>{st.badge}</span>
-                <div className="bk-step-text">
-                  <div style={{ fontSize: 9, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(241,236,225,.4)' }}>{t('Bước', 'Step')} {st.n}</div>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: (st.active || st.done) ? styles.text : 'rgba(241,236,225,.45)' }}>{st.label}</div>
+          {stepItems.map((st, i) => {
+            const clickable = st.done || (st.n === step + 1 && canNext);
+            return (
+              <div
+                key={i}
+                className="bk-step-item"
+                onClick={clickable ? () => goStep(st.n) : undefined}
+                style={{ display: 'flex', alignItems: 'center', flex: 1, cursor: clickable ? 'pointer' : 'default', transition: 'opacity .2s' }}
+                onMouseEnter={clickable ? e => { e.currentTarget.style.opacity = '0.7'; } : undefined}
+                onMouseLeave={clickable ? e => { e.currentTarget.style.opacity = '1'; } : undefined}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{
+                    width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0,
+                    ...((st.active || st.done)
+                      ? { background: styles.accent, color: '#0B1620' }
+                      : { background: 'transparent', color: 'rgba(241,236,225,.45)', border: '1px solid rgba(238,138,51,.3)' }),
+                  }}>{st.badge}</span>
+                  <div className="bk-step-text">
+                    <div style={{ fontSize: 9, letterSpacing: '.16em', textTransform: 'uppercase', color: 'rgba(241,236,225,.4)' }}>{t('Bước', 'Step')} {st.n}</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: (st.active || st.done) ? styles.text : 'rgba(241,236,225,.45)' }}>{st.label}</div>
+                  </div>
                 </div>
+                {i < 4 && (
+                  <span className="bk-step-connector" style={{ flex: 1, height: 1, margin: '0 14px', background: st.done ? 'rgba(238,138,51,.5)' : 'rgba(238,138,51,.15)' }} />
+                )}
               </div>
-              {i < 4 && (
-                <span className="bk-step-connector" style={{ flex: 1, height: 1, margin: '0 14px', background: st.done ? 'rgba(238,138,51,.5)' : 'rgba(238,138,51,.15)' }} />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -346,11 +356,11 @@ export default function HomePage() {
                   : branches.map(b => {
                       const sel = b.id === branchId;
                       return (
-                        <div key={b.id} style={{ borderRadius: 6, overflow: 'hidden', background: sel ? styles.selectedBg : styles.cardBg, border: sel ? `1px solid ${styles.accent}` : `1px solid rgba(238,138,51,.16)` }}>
+                        <div key={b.id} onClick={() => { setBranchId(b.id); setBarberId(null); }} style={{ borderRadius: 6, overflow: 'hidden', cursor: 'pointer', background: sel ? styles.selectedBg : styles.cardBg, border: sel ? `1px solid ${styles.accent}` : `1px solid rgba(238,138,51,.16)` }}>
                           <div style={{ width: '100%', height: 128, background: 'linear-gradient(150deg,#16110C,#2a211a)', borderBottom: '1px solid rgba(238,138,51,.14)', position: 'relative', overflow: 'hidden' }}>
                             {b.imageUrl && <img src={b.imageUrl} alt={b.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
                           </div>
-                          <button onClick={() => { setBranchId(b.id); setBarberId(null); }} style={{ display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer', padding: '18px 20px', border: 'none', background: 'transparent', fontFamily: hanken.style.fontFamily }}>
+                          <div style={{ padding: '18px 20px' }}>
                             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                               <h3 style={{ fontFamily: playfair.style.fontFamily, fontSize: 18, fontWeight: 700, color: styles.text, margin: 0 }}>{b.name}</h3>
                               <span style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, ...(sel ? { background: styles.accent, color: '#0B1620' } : { border: '1px solid rgba(238,138,51,.3)' }) }}>{sel ? '✓' : ''}</span>
@@ -364,7 +374,7 @@ export default function HomePage() {
                                 </span>
                               )}
                             </div>
-                          </button>
+                          </div>
                         </div>
                       );
                     })}

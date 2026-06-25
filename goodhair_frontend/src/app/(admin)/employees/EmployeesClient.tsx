@@ -300,7 +300,7 @@ export default function EmployeesClient() {
             </div>
 
             <div style={{ marginBottom: 18 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,0.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Chi nhánh</label>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Chi nhánh</label>
               <Select
                 value={editTarget.branchId}
                 onChange={(val) => setEditTarget({ ...editTarget, branchId: val })}
@@ -312,7 +312,7 @@ export default function EmployeesClient() {
             </div>
 
             <div style={{ marginBottom: 18 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,0.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vai trò</label>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Vai trò</label>
               <Select
                 value={editTarget.roleId}
                 onChange={(val) => setEditTarget({ ...editTarget, roleId: val })}
@@ -324,7 +324,7 @@ export default function EmployeesClient() {
             </div>
 
             <div style={{ marginBottom: 18 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,0.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trạng thái</label>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Trạng thái</label>
               <Select
                 value={editTarget.status}
                 onChange={(val) => setEditTarget({ ...editTarget, status: val })}
@@ -346,7 +346,7 @@ export default function EmployeesClient() {
               <button
                 onClick={handleEdit}
                 disabled={submitting}
-                style={{ flex: 1, background: '#EE8A33', color: '#fff', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
+                style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
               >
                 {submitting ? 'Đang lưu...' : 'Lưu thay đổi'}
               </button>

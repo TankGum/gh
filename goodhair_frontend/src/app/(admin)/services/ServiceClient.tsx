@@ -1,16 +1,49 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Modal, Form, Input, InputNumber, Switch, Select, App, Space, Pagination } from 'antd';
+import type { CSSProperties } from 'react';
+import { Select, App, Pagination } from 'antd';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import FilterBar from '@/components/ui/FilterBar';
+import Modal from '@/components/ui/Modal';
 import { HairService, ServiceCreatePayload, ServiceUpdatePayload, ServiceStatus } from '@/types/service.type';
 import { createService, fetchServices, updateService, deleteService } from '@/services/services.api';
 import { fetchBranches, type Branch } from '@/services/branches.api';
 import { useAuth } from '@/contexts/AuthContext';
 
 const priceFormatter = new Intl.NumberFormat('vi-VN');
+
+const labelStyle: CSSProperties = {
+  display: 'block',
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'rgba(241,236,225,.55)',
+  marginBottom: 5,
+  textTransform: 'uppercase',
+  letterSpacing: '.06em',
+};
+
+const errStyle: CSSProperties = {
+  fontSize: 11,
+  color: '#EF4444',
+  marginTop: 4,
+  display: 'block',
+};
+
+function fieldStyle(hasError?: boolean): CSSProperties {
+  return {
+    width: '100%',
+    background: '#0B1620',
+    border: `1px solid ${hasError ? '#EF4444' : 'rgba(238,138,51,.25)'}`,
+    color: '#F1ECE1',
+    padding: '10px 12px',
+    borderRadius: 6,
+    fontSize: 13,
+    outline: 'none',
+    fontFamily: "'Hanken Grotesk',sans-serif",
+  };
+}
 
 export default function ServiceClient() {
   const { message } = App.useApp();
@@ -29,13 +62,20 @@ export default function ServiceClient() {
   const [sortBy, setSortBy] = useState<string | undefined>(undefined);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Create / Edit modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<HairService | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form] = Form.useForm();
 
-  // Delete modal
+  // Form state
+  const [formName, setFormName] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formDuration, setFormDuration] = useState(30);
+  const [formPrice, setFormPrice] = useState(0);
+  const [formIsActive, setFormIsActive] = useState(true);
+  const [formIsAllBranches, setFormIsAllBranches] = useState(true);
+  const [formBranchIds, setFormBranchIds] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   const [deletingService, setDeletingService] = useState<HairService | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -69,52 +109,63 @@ export default function ServiceClient() {
 
   const openCreate = () => {
     setEditingService(null);
-    form.resetFields();
-    form.setFieldsValue({ isActive: true, isAllBranches: true, durationMinutes: 30, price: 0 });
+    setFormName('');
+    setFormDescription('');
+    setFormDuration(30);
+    setFormPrice(0);
+    setFormIsActive(true);
+    setFormIsAllBranches(true);
+    setFormBranchIds([]);
+    setFormErrors({});
     setModalOpen(true);
   };
 
   const openEdit = (svc: HairService) => {
     setEditingService(svc);
-    form.setFieldsValue({
-      name: svc.name,
-      description: svc.description,
-      durationMinutes: svc.durationMinutes,
-      price: svc.price,
-      isActive: svc.status === 'active',
-      isAllBranches: svc.isAllBranches,
-      branchIds: svc.branchIds,
-    });
+    setFormName(svc.name);
+    setFormDescription(svc.description ?? '');
+    setFormDuration(svc.durationMinutes);
+    setFormPrice(svc.price);
+    setFormIsActive(svc.status === 'active');
+    setFormIsAllBranches(svc.isAllBranches);
+    setFormBranchIds(svc.branchIds ?? []);
+    setFormErrors({});
     setModalOpen(true);
   };
 
   const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      const status: ServiceStatus = values.isActive ? 'active' : 'hidden';
-      setSubmitting(true);
-      setError(null);
+    const errs: Record<string, string> = {};
+    if (!formName.trim()) errs.name = 'Vui lòng nhập tên dịch vụ';
+    if (!formDuration || formDuration < 1) errs.durationMinutes = 'Thời lượng phải ít nhất 1 phút';
+    if (formPrice < 0) errs.price = 'Giá không được âm';
+    if (!formIsAllBranches && formBranchIds.length === 0) errs.branchIds = 'Vui lòng chọn ít nhất một cửa hàng';
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
+    const status: ServiceStatus = formIsActive ? 'active' : 'hidden';
+    setSubmitting(true);
+    setError(null);
+    try {
       if (editingService) {
         const payload: ServiceUpdatePayload = {};
-        if (values.name !== editingService.name) payload.name = values.name;
-        if (values.description !== (editingService.description ?? '')) payload.description = values.description || null;
-        if (Number(values.durationMinutes) !== editingService.durationMinutes) payload.durationMinutes = values.durationMinutes;
-        if (Number(values.price) !== editingService.price) payload.price = values.price;
+        if (formName !== editingService.name) payload.name = formName;
+        if (formDescription !== (editingService.description ?? '')) payload.description = formDescription || null;
+        if (formDuration !== editingService.durationMinutes) payload.durationMinutes = formDuration;
+        if (formPrice !== editingService.price) payload.price = formPrice;
         if (status !== editingService.status) payload.status = status;
-        if (values.isAllBranches !== editingService.isAllBranches) payload.isAllBranches = values.isAllBranches;
-        if (!values.isAllBranches && values.branchIds?.length) payload.branchIds = values.branchIds;
+        if (formIsAllBranches !== editingService.isAllBranches) payload.isAllBranches = formIsAllBranches;
+        if (!formIsAllBranches && formBranchIds.length) payload.branchIds = formBranchIds;
         await updateService(editingService.id, payload);
         message.success('Cập nhật dịch vụ thành công');
       } else {
         const payload: ServiceCreatePayload = {
-          name: values.name,
-          description: values.description || null,
-          durationMinutes: values.durationMinutes,
-          price: values.price,
+          name: formName,
+          description: formDescription || null,
+          durationMinutes: formDuration,
+          price: formPrice,
           status,
-          isAllBranches: values.isAllBranches,
-          branchIds: values.isAllBranches ? undefined : values.branchIds,
+          isAllBranches: formIsAllBranches,
+          branchIds: formIsAllBranches ? undefined : formBranchIds,
         };
         await createService(payload);
         message.success('Tạo dịch vụ thành công');
@@ -279,73 +330,146 @@ export default function ServiceClient() {
 
       {/* Create / Edit Modal */}
       <Modal
-        title={editingService ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ mới'}
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
-        onOk={handleSubmit}
-        confirmLoading={submitting}
-        okText={editingService ? 'Lưu thay đổi' : 'Tạo dịch vụ'}
-        cancelText="Hủy"
-        width={520}
+        onClose={() => setModalOpen(false)}
+        title={editingService ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ mới'}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="Tên dịch vụ" rules={[{ required: true, message: 'Vui lòng nhập tên dịch vụ' }]}>
-            <Input placeholder="VD: Cắt tóc nam" />
-          </Form.Item>
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          <Form.Item name="description" label="Mô tả">
-            <Input.TextArea rows={3} placeholder="Mô tả ngắn về dịch vụ..." />
-          </Form.Item>
+            <div>
+              <label style={labelStyle}>Tên dịch vụ *</label>
+              <input
+                type="text"
+                value={formName}
+                onChange={e => { setFormName(e.target.value); setFormErrors(p => ({ ...p, name: '' })); }}
+                style={fieldStyle(!!formErrors.name)}
+                placeholder="VD: Cắt tóc nam"
+              />
+              {formErrors.name && <span style={errStyle}>{formErrors.name}</span>}
+            </div>
 
-          <Space style={{ width: '100%' }} size={16}>
-            <Form.Item name="durationMinutes" label="Thời lượng (phút)" rules={[{ required: true }]} style={{ flex: 1 }}>
-              <InputNumber min={1} style={{ width: '100%' }} />
-            </Form.Item>
-            <Form.Item name="price" label="Giá (VNĐ)" rules={[{ required: true }]} style={{ flex: 1 }}>
-              <InputNumber min={0} style={{ width: '100%' }} />
-            </Form.Item>
-          </Space>
+            <div>
+              <label style={labelStyle}>Mô tả</label>
+              <textarea
+                value={formDescription}
+                onChange={e => setFormDescription(e.target.value)}
+                rows={3}
+                style={{ ...fieldStyle(false), resize: 'vertical' }}
+                placeholder="Mô tả ngắn về dịch vụ..."
+              />
+            </div>
 
-          <Form.Item name="isActive" label="Trạng thái" valuePropName="checked">
-            <Switch checkedChildren="Đang bán" unCheckedChildren="Tạm ẩn" />
-          </Form.Item>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Thời lượng (phút) *</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={formDuration}
+                  onChange={e => { setFormDuration(Number(e.target.value)); setFormErrors(p => ({ ...p, durationMinutes: '' })); }}
+                  style={fieldStyle(!!formErrors.durationMinutes)}
+                />
+                {formErrors.durationMinutes && <span style={errStyle}>{formErrors.durationMinutes}</span>}
+              </div>
+              <div>
+                <label style={labelStyle}>Giá (VNĐ) *</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={formPrice}
+                  onChange={e => { setFormPrice(Number(e.target.value)); setFormErrors(p => ({ ...p, price: '' })); }}
+                  style={fieldStyle(!!formErrors.price)}
+                />
+                {formErrors.price && <span style={errStyle}>{formErrors.price}</span>}
+              </div>
+            </div>
 
-          <Form.Item name="isAllBranches" label="Áp dụng cho tất cả cửa hàng" valuePropName="checked">
-            <Switch checkedChildren="Có" unCheckedChildren="Không" />
-          </Form.Item>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => setFormIsActive(v => !v)}
+                style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: formIsActive ? '#EE8A33' : 'rgba(241,236,225,.15)', position: 'relative', flexShrink: 0, transition: 'background .2s' }}
+              >
+                <span style={{ position: 'absolute', top: 3, left: formIsActive ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
+              </button>
+              <span style={{ fontSize: 13, color: 'rgba(241,236,225,.8)', fontWeight: 600 }}>
+                {formIsActive ? 'Đang bán' : 'Tạm ẩn'}
+              </span>
+            </div>
 
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.isAllBranches !== cur.isAllBranches}>
-            {({ getFieldValue }) =>
-              !getFieldValue('isAllBranches') ? (
-                <Form.Item name="branchIds" label="Chọn cửa hàng" rules={[{ required: true, message: 'Vui lòng chọn ít nhất một cửa hàng' }]}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => setFormIsAllBranches(v => !v)}
+                style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: formIsAllBranches ? '#EE8A33' : 'rgba(241,236,225,.15)', position: 'relative', flexShrink: 0, transition: 'background .2s' }}
+              >
+                <span style={{ position: 'absolute', top: 3, left: formIsAllBranches ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
+              </button>
+              <span style={{ fontSize: 13, color: 'rgba(241,236,225,.8)', fontWeight: 600 }}>Áp dụng cho tất cả cửa hàng</span>
+            </div>
+
+            {!formIsAllBranches && (
+              <div>
+                <label style={labelStyle}>Chọn cửa hàng *</label>
+                <div style={{ border: `1px solid ${formErrors.branchIds ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
                   <Select
                     mode="multiple"
+                    size="large"
+                    variant="borderless"
+                    value={formBranchIds}
+                    onChange={(ids: string[]) => { setFormBranchIds(ids); setFormErrors(p => ({ ...p, branchIds: '' })); }}
+                    style={{ width: '100%' }}
                     placeholder="Chọn cửa hàng..."
                     loading={branchesLoading}
                     options={branches.map(b => ({ label: b.name, value: b.id }))}
                     filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
                   />
-                </Form.Item>
-              ) : null
-            }
-          </Form.Item>
-        </Form>
+                </div>
+                {formErrors.branchIds && <span style={errStyle}>{formErrors.branchIds}</span>}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 12, paddingTop: 4 }}>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Huỷ
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
+              >
+                {submitting ? 'Đang lưu...' : (editingService ? 'Lưu thay đổi' : 'Tạo dịch vụ')}
+              </button>
+            </div>
+          </div>
+        </div>
       </Modal>
 
       {/* Delete confirmation */}
-      <Modal
-        title="Xác nhận xóa"
-        open={!!deletingService}
-        onCancel={() => setDeletingService(null)}
-        onOk={handleDelete}
-        confirmLoading={deleting}
-        okText="Xóa"
-        cancelText="Hủy"
-        okButtonProps={{ danger: true }}
-      >
-        <p style={{ color: '#cbd5e1' }}>
-          Bạn có chắc muốn xóa dịch vụ <strong style={{ color: '#fff' }}>{deletingService?.name}</strong>?
-        </p>
+      <Modal open={!!deletingService} onClose={() => setDeletingService(null)} title="Xác nhận xoá">
+        {deletingService && (
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(168,150,120,.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C6B7A0" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg>
+            </div>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 21, fontWeight: 700, marginTop: 18, color: '#F1ECE1' }}>Xác nhận xoá</h3>
+            <p style={{ fontSize: 14, color: 'rgba(241,236,225,.6)', marginTop: 10, lineHeight: 1.55 }}>
+              Bạn có chắc muốn xoá dịch vụ <b style={{ color: '#F1ECE1' }}>{deletingService.name}</b>? Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button onClick={() => setDeletingService(null)} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Huỷ</button>
+              <button onClick={handleDelete} disabled={deleting} style={{ flex: 1, background: '#46505C', color: '#fff', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
+                {deleting ? 'Đang xoá...' : 'Xoá'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );

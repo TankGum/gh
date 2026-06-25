@@ -5,9 +5,10 @@ import type {
   PublicCustomer,
   PublicEmployee,
   PublicService,
+  PublicStats,
 } from '@/types/public.type';
 
-export type { PublicBranch, PublicCustomer, PublicEmployee, PublicService };
+export type { PublicBranch, PublicCustomer, PublicEmployee, PublicService, PublicStats };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8002/api/v1';
 
@@ -56,6 +57,10 @@ export function fetchPublicTopCustomers(
   return publicFetch(`/public/top-customers?limit=${limit}`);
 }
 
+export function fetchPublicStats(): Promise<PublicStats> {
+  return publicFetch('/public/stats');
+}
+
 export interface BookedWindow {
   startMinutes: number;
   durationMinutes: number;
@@ -90,13 +95,13 @@ export async function createPublicBooking(
   payload: {
     customerName: string;
     customerPhone: string;
-    employeeId?: string | null;
-    branchId?: string | null;
+    employeeId: string;
+    branchId: string;
     date: string;
     startTime: string;
-    durationMinutes?: number;
-    total?: number;
-    serviceIds?: string[];
+    durationMinutes: number;
+    total: number;
+    serviceIds: string[];
   },
   lang?: 'vi' | 'en',
 ): Promise<{ code: string; customerName: string; date: string; startTime: string; total: number }> {

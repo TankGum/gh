@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import {
   Plus,
   Pencil,
@@ -29,6 +30,7 @@ import {
   uploadBranchImage,
 } from '@/services/branches.api';
 import Modal from '@/components/ui/Modal';
+import { Select } from 'antd';
 
 const STATUS_META: Record<BranchStatus, { label: string; className: string }> = {
   open: { label: 'Đang mở', className: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
@@ -78,10 +80,43 @@ const emptyForm: BranchFormState = {
   status: 'open',
 };
 
+const labelStyle: CSSProperties = {
+  display: 'block',
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'rgba(241,236,225,.55)',
+  marginBottom: 5,
+  textTransform: 'uppercase',
+  letterSpacing: '.06em',
+};
+
+const errStyle: CSSProperties = {
+  fontSize: 11,
+  color: '#EF4444',
+  marginTop: 4,
+  display: 'block',
+};
+
+function fieldStyle(hasError?: boolean): CSSProperties {
+  return {
+    width: '100%',
+    background: '#0B1620',
+    border: `1px solid ${hasError ? '#EF4444' : 'rgba(238,138,51,.25)'}`,
+    color: '#F1ECE1',
+    padding: '10px 12px',
+    borderRadius: 6,
+    fontSize: 13,
+    outline: 'none',
+    fontFamily: "'Hanken Grotesk',sans-serif",
+    colorScheme: 'dark',
+  };
+}
+
 function BranchForm({
   form,
   onChange,
   onSubmit,
+  onCancel,
   submitting,
   submitLabel,
   readonlyBarberCount,
@@ -92,6 +127,7 @@ function BranchForm({
   form: BranchFormState;
   onChange: (patch: Partial<BranchFormState>) => void;
   onSubmit: () => void;
+  onCancel: () => void;
   submitting: boolean;
   submitLabel: string;
   readonlyBarberCount?: number;
@@ -116,206 +152,138 @@ function BranchForm({
     }
   };
 
-  const inputCls = (key: string) =>
-    `w-full bg-[#161e31] border ${errors?.[key] ? 'border-red-500' : 'border-slate-700/50'} rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500`;
-
   const change = (key: string, patch: Partial<BranchFormState>) => {
     onClearError?.(key);
     onChange(patch);
   };
 
-  const Err = ({ k }: { k: string }) =>
-    errors?.[k] ? <p className="text-xs text-red-400 mt-1">{errors[k]}</p> : null;
-
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit();
-      }}
-      className="space-y-4"
-    >
-      {/* Image upload */}
-      <div>
-        <label className="block text-sm text-slate-400 mb-1">Ảnh chi nhánh</label>
-        <div className="flex items-center gap-4">
-          <div className="w-24 h-24 rounded-md bg-[#161e31] border border-slate-700/50 overflow-hidden flex items-center justify-center shrink-0">
-            {form.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.imageUrl} alt="branch" className="w-full h-full object-cover" />
-            ) : (
-              <Store size={28} className="text-slate-600" />
-            )}
-          </div>
-          <div className="flex-1">
-            <label className="inline-flex items-center gap-2 cursor-pointer bg-[#161e31] border border-slate-700/50 hover:bg-slate-800 text-slate-300 px-3 py-2 rounded-md text-sm transition-colors">
-              <Upload size={16} />
-              {uploading ? 'Đang tải...' : 'Chọn ảnh'}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => handleFile(e.target.files?.[0])}
-              />
-            </label>
-            {form.imageUrl && (
-              <button
-                type="button"
-                onClick={() => onChange({ imageUrl: '' })}
-                className="ml-2 text-xs text-red-400 hover:text-red-300"
-              >
-                Xóa ảnh
-              </button>
-            )}
-            {uploadError && <p className="text-xs text-red-400 mt-1">{uploadError}</p>}
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Image upload */}
+        <div>
+          <label style={labelStyle}>Ảnh chi nhánh</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 80, height: 80, borderRadius: 8, background: '#0B1620', border: '1px solid rgba(238,138,51,.16)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              {form.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.imageUrl} alt="branch" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <Store size={26} style={{ color: 'rgba(241,236,225,0.2)' }} />
+              )}
+            </div>
+            <div>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: '#EE8A33', padding: '8px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, fontFamily: "'Hanken Grotesk',sans-serif" }}>
+                <Upload size={14} />
+                {uploading ? 'Đang tải...' : 'Chọn ảnh'}
+                <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => handleFile(e.target.files?.[0])} />
+              </label>
+              {form.imageUrl && (
+                <button type="button" onClick={() => onChange({ imageUrl: '' })} style={{ marginLeft: 8, background: 'none', border: 'none', color: '#EF4444', fontSize: 12, cursor: 'pointer', fontFamily: "'Hanken Grotesk',sans-serif" }}>
+                  Xóa ảnh
+                </button>
+              )}
+              {uploadError && <span style={errStyle}>{uploadError}</span>}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm text-slate-400 mb-1">Tên chi nhánh *</label>
-        <input
-          type="text"
-          value={form.name}
-          onChange={(e) => change('name', { name: e.target.value })}
-          className={inputCls('name')}
-          placeholder="VD: Saigon Centre"
-        />
-        <Err k="name" />
-      </div>
+        <div>
+          <label style={labelStyle}>Tên chi nhánh *</label>
+          <input type="text" value={form.name} onChange={(e) => change('name', { name: e.target.value })} style={fieldStyle(!!errors?.name)} placeholder="VD: Saigon Centre" />
+          {errors?.name && <span style={errStyle}>{errors.name}</span>}
+        </div>
 
-      <div>
-        <label className="block text-sm text-slate-400 mb-1">Địa chỉ *</label>
-        <input
-          type="text"
-          value={form.address}
-          onChange={(e) => change('address', { address: e.target.value })}
-          className={inputCls('address')}
-          placeholder="VD: 65 Lê Lợi, Quận 1"
-        />
-        <Err k="address" />
-      </div>
+        <div>
+          <label style={labelStyle}>Địa chỉ *</label>
+          <input type="text" value={form.address} onChange={(e) => change('address', { address: e.target.value })} style={fieldStyle(!!errors?.address)} placeholder="VD: 65 Lê Lợi, Quận 1" />
+          {errors?.address && <span style={errStyle}>{errors.address}</span>}
+        </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Vĩ độ (latitude) *</label>
-          <input
-            type="number"
-            step="any"
-            value={form.latitude}
-            onChange={(e) => change('latitude', { latitude: e.target.value })}
-            className={inputCls('latitude')}
-            placeholder="VD: 10.7769"
-          />
-          <Err k="latitude" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Vĩ độ *</label>
+            <input type="number" step="any" value={form.latitude} onChange={(e) => change('latitude', { latitude: e.target.value })} style={fieldStyle(!!errors?.latitude)} placeholder="10.7769" />
+            {errors?.latitude && <span style={errStyle}>{errors.latitude}</span>}
+          </div>
+          <div>
+            <label style={labelStyle}>Kinh độ *</label>
+            <input type="number" step="any" value={form.longitude} onChange={(e) => change('longitude', { longitude: e.target.value })} style={fieldStyle(!!errors?.longitude)} placeholder="106.7009" />
+            {errors?.longitude && <span style={errStyle}>{errors.longitude}</span>}
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Kinh độ (longitude) *</label>
-          <input
-            type="number"
-            step="any"
-            value={form.longitude}
-            onChange={(e) => change('longitude', { longitude: e.target.value })}
-            className={inputCls('longitude')}
-            placeholder="VD: 106.7009"
-          />
-          <Err k="longitude" />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Giờ mở cửa *</label>
-          <input
-            type="time"
-            value={form.openingTime}
-            onChange={(e) => change('openingTime', { openingTime: e.target.value })}
-            className={inputCls('openingTime')}
-          />
-          <Err k="openingTime" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Giờ mở cửa *</label>
+            <input type="time" value={form.openingTime} onChange={(e) => change('openingTime', { openingTime: e.target.value })} style={fieldStyle(!!errors?.openingTime)} />
+            {errors?.openingTime && <span style={errStyle}>{errors.openingTime}</span>}
+          </div>
+          <div>
+            <label style={labelStyle}>Giờ đóng cửa *</label>
+            <input type="time" value={form.closingTime} onChange={(e) => change('closingTime', { closingTime: e.target.value })} style={fieldStyle(!!errors?.closingTime)} />
+            {errors?.closingTime && <span style={errStyle}>{errors.closingTime}</span>}
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Giờ đóng cửa *</label>
-          <input
-            type="time"
-            value={form.closingTime}
-            onChange={(e) => change('closingTime', { closingTime: e.target.value })}
-            className={inputCls('closingTime')}
-          />
-          <Err k="closingTime" />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Đánh giá (0-5)</label>
-          <input
-            type="number"
-            min={0}
-            max={5}
-            step="0.1"
-            value={form.rating}
-            onChange={(e) => change('rating', { rating: e.target.value })}
-            className={inputCls('rating')}
-          />
-          <Err k="rating" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Đánh giá (0–5)</label>
+            <input type="number" min={0} max={5} step="0.1" value={form.rating} onChange={(e) => change('rating', { rating: e.target.value })} style={fieldStyle(!!errors?.rating)} />
+            {errors?.rating && <span style={errStyle}>{errors.rating}</span>}
+          </div>
+          <div>
+            <label style={labelStyle}>Số ghế *</label>
+            <input type="number" min={0} value={form.seatCount} onChange={(e) => change('seatCount', { seatCount: e.target.value })} style={fieldStyle(!!errors?.seatCount)} />
+            {errors?.seatCount && <span style={errStyle}>{errors.seatCount}</span>}
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-slate-400 mb-1">Số ghế *</label>
-          <input
-            type="number"
-            min={0}
-            value={form.seatCount}
-            onChange={(e) => change('seatCount', { seatCount: e.target.value })}
-            className={inputCls('seatCount')}
-          />
-          <Err k="seatCount" />
-        </div>
-      </div>
 
-      {(readonlyBarberCount !== undefined || readonlyMonthlyRevenue !== undefined) && (
-        <div className="grid grid-cols-2 gap-4 rounded-md bg-[#0d1424] border border-slate-700/50 p-3">
-          {readonlyBarberCount !== undefined && (
-            <div>
-              <div className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-                <Scissors size={12} /> Số barber (tự động)
+        {(readonlyBarberCount !== undefined || readonlyMonthlyRevenue !== undefined) && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, background: 'rgba(241,236,225,.04)', border: '1px solid rgba(238,138,51,.1)', borderRadius: 6, padding: '12px 14px' }}>
+            {readonlyBarberCount !== undefined && (
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(241,236,225,.5)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Scissors size={12} /> Số barber (tự động)
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#F1ECE1' }}>{readonlyBarberCount}</div>
               </div>
-              <div className="text-white font-medium">{readonlyBarberCount}</div>
-            </div>
-          )}
-          {readonlyMonthlyRevenue !== undefined && (
-            <div>
-              <div className="text-xs text-slate-500 mb-1">Doanh thu tháng (tự động)</div>
-              <div className="font-medium" style={{ color: '#ee8a33' }}>
-                {readonlyMonthlyRevenue.toLocaleString('vi-VN')} ₫
+            )}
+            {readonlyMonthlyRevenue !== undefined && (
+              <div>
+                <div style={{ fontSize: 11, color: 'rgba(241,236,225,.5)', marginBottom: 4 }}>Doanh thu tháng (tự động)</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#EE8A33' }}>{readonlyMonthlyRevenue.toLocaleString('vi-VN')} ₫</div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        )}
+
+        <div>
+          <label style={labelStyle}>Trạng thái hoạt động</label>
+          <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+            <Select
+              value={form.status}
+              onChange={(val: BranchStatus) => onChange({ status: val })}
+              style={{ width: '100%' }}
+              variant="borderless"
+              options={[
+                { label: 'Đang mở', value: 'open' },
+                { label: 'Sắp mở', value: 'coming_soon' },
+                { label: 'Đóng cửa', value: 'closed' },
+              ]}
+            />
+          </div>
         </div>
-      )}
 
-      <div>
-        <label className="block text-sm text-slate-400 mb-1">Trạng thái hoạt động</label>
-        <select
-          value={form.status}
-          onChange={(e) => onChange({ status: e.target.value as BranchStatus })}
-          className={inputCls}
-        >
-          <option value="open">Đang mở</option>
-          <option value="coming_soon">Sắp mở</option>
-          <option value="closed">Đóng cửa</option>
-        </select>
-      </div>
-
-      <div className="flex justify-end gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={submitting || uploading}
-           style={{ background: '#ee8a33' }}
-           className="text-white px-5 py-2 rounded-md text-sm font-medium transition-colors"
-        >
-          {submitting ? 'Đang xử lý...' : submitLabel}
-        </button>
+        <div style={{ display: 'flex', gap: 12, paddingTop: 4 }}>
+          <button type="button" onClick={onCancel} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Huỷ
+          </button>
+          <button type="submit" disabled={submitting || uploading} style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (submitting || uploading) ? 0.5 : 1 }}>
+            {submitting ? 'Đang xử lý...' : submitLabel}
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -389,31 +357,31 @@ function BranchCard({
           </span>
         </div>
 
-          <div className="flex items-center justify-between mt-auto pt-1">
-            <span className="text-xs text-slate-500 flex items-center gap-1">
-              <Clock size={13} /> {hoursLabel(branch)}
-            </span>
-            <div className="flex items-center gap-2">
-              {canEdit && (
-                <button
-                  onClick={onEdit}
-                  title="Sửa"
-                  className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <Pencil size={13} />
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  onClick={onDelete}
-                  title="Xóa"
-                  className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors cursor-pointer"
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
-            </div>
+        <div className="flex items-center justify-between mt-auto pt-1">
+          <span className="text-xs text-slate-500 flex items-center gap-1">
+            <Clock size={13} /> {hoursLabel(branch)}
+          </span>
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <button
+                onClick={onEdit}
+                title="Sửa"
+                className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Pencil size={13} />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={onDelete}
+                title="Xóa"
+                className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors cursor-pointer"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
+        </div>
       </div>
     </div>
   );
@@ -583,7 +551,7 @@ export default function BranchClient() {
       <FilterBar onSearch={setQuery} placeholder="Tìm chi nhánh" marginBottom={24} />
 
       {error && (
-        <div className="mb-6 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div style={{ marginBottom: 16, padding: '8px 16px', background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 6, color: '#f87171', fontSize: 14 }}>
           {error}
         </div>
       )}
@@ -614,6 +582,7 @@ export default function BranchClient() {
           form={createForm}
           onChange={(patch) => setCreateForm((prev) => ({ ...prev, ...patch }))}
           onSubmit={handleCreate}
+          onCancel={() => { setShowCreate(false); setCreateErrors({}); }}
           submitting={creating}
           submitLabel="Thêm mới"
           errors={createErrors}
@@ -628,6 +597,7 @@ export default function BranchClient() {
             form={editForm}
             onChange={(patch) => setEditForm((prev) => ({ ...prev, ...patch }))}
             onSubmit={handleUpdate}
+            onCancel={() => { setEditing(null); setEditErrors({}); }}
             submitting={updating}
             submitLabel="Lưu thay đổi"
             readonlyBarberCount={editing.barberCount}
@@ -639,30 +609,20 @@ export default function BranchClient() {
       </Modal>
 
       {/* Delete Confirmation */}
-      <Modal
-        open={!!deletingBranch}
-        onClose={() => setDeletingBranch(null)}
-        title="Xác nhận xóa"
-      >
+      <Modal open={!!deletingBranch} onClose={() => setDeletingBranch(null)} title="Xác nhận xoá">
         {deletingBranch && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-300">
-              Bạn có chắc muốn xóa chi nhánh{' '}
-              <span className="font-bold text-white">{deletingBranch.name}</span>?
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(168,150,120,.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#C6B7A0" strokeWidth="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg>
+            </div>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 21, fontWeight: 700, marginTop: 18, color: '#F1ECE1' }}>Xác nhận xoá</h3>
+            <p style={{ fontSize: 14, color: 'rgba(241,236,225,.6)', marginTop: 10, lineHeight: 1.55 }}>
+              Bạn có chắc muốn xoá chi nhánh <b style={{ color: '#F1ECE1' }}>{deletingBranch.name}</b>? Hành động này không thể hoàn tác.
             </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeletingBranch(null)}
-                className="px-4 py-2 rounded-md text-sm font-medium text-slate-300 bg-[#161e31] border border-slate-700/50 hover:bg-slate-800 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
-              >
-                {deleting ? 'Đang xóa...' : 'Xóa'}
+            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+              <button onClick={() => setDeletingBranch(null)} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Huỷ</button>
+              <button onClick={handleDelete} disabled={deleting} style={{ flex: 1, background: '#46505C', color: '#fff', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: deleting ? 0.5 : 1 }}>
+                {deleting ? 'Đang xoá...' : 'Xoá'}
               </button>
             </div>
           </div>

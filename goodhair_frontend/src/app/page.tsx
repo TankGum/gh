@@ -9,10 +9,12 @@ import {
   fetchPublicBranches,
   fetchPublicEmployees,
   fetchPublicTopCustomers,
+  fetchPublicStats,
   type PublicService,
   type PublicBranch,
   type PublicEmployee,
   type PublicCustomer,
+  type PublicStats,
 } from '@/services/public.api';
 import { getMe } from '@/services/auth.api';
 import type { Me } from '@/types/account.type';
@@ -45,6 +47,7 @@ export default function HomePage() {
   const [employeesList, setEmployeesList] = useState<PublicEmployee[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(true);
   const [topCustomers, setTopCustomers] = useState<PublicCustomer[]>([]);
+  const [stats, setStats] = useState<PublicStats | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -130,8 +133,15 @@ export default function HomePage() {
 
   // Fetch top customers
   useEffect(() => {
-    fetchPublicTopCustomers(12)
+    fetchPublicTopCustomers(3)
       .then(setTopCustomers)
+      .catch(() => {});
+  }, []);
+
+  // Fetch public stats
+  useEffect(() => {
+    fetchPublicStats()
+      .then(setStats)
       .catch(() => {});
   }, []);
 
@@ -199,7 +209,6 @@ export default function HomePage() {
               { href: '#services', label: t('Dịch vụ',    'Services') },
               { href: '#barbers',  label: t('Barber',     'Barbers') },
               { href: '#branches', label: t('Chi nhánh',  'Locations') },
-              { href: '#careers',  label: t('Tuyển dụng', 'Careers') },
             ] as const).map(item => (
               <a key={item.href} href={item.href} className="gh-nav-link"
                 style={{ textDecoration: 'none', color: 'rgba(241,236,225,.68)', fontSize: 13.5, fontWeight: 500, letterSpacing: '.025em', position: 'relative', padding: '4px 0', whiteSpace: 'nowrap' }}>
@@ -296,7 +305,6 @@ export default function HomePage() {
             { href: '#services', label: t('Dịch vụ',    'Services') },
             { href: '#barbers',  label: t('Barber',     'Barbers') },
             { href: '#branches', label: t('Chi nhánh',  'Locations') },
-            { href: '#careers',  label: t('Tuyển dụng', 'Careers') },
           ] as const).map(item => (
             <a key={item.href} href={item.href} onClick={() => setMobileOpen(false)}
               className="gh-sb-item"
@@ -372,17 +380,24 @@ export default function HomePage() {
               </a>
             </div>
             <div id="gh-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginTop: 64, borderTop: '1px solid rgba(238,138,51,.18)', paddingTop: 30 }}>
-              {[
-                { value: `2${t('+', '+')}`, label: t('Năm kinh nghiệm', 'Years of craft') },
-                { value: '6', label: t('Chi nhánh', 'Locations') },
-                { value: `40${t('+', '+')}`, label: t('Barber', 'Master barbers') },
-                { value: `120K${t('+', '+')}`, label: t('Khách hàng', 'Happy clients') },
-              ].map(stat => (
-                <div key={stat.label}>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 700, color: '#F1ECE1' }} dangerouslySetInnerHTML={{ __html: stat.value }} />
-                  <div style={{ fontSize: 12, letterSpacing: '.06em', color: 'rgba(241,236,225,.5)', marginTop: 4 }}>{stat.label}</div>
-                </div>
-              ))}
+              {stats
+                ? [
+                    { value: `${stats.yearsInBusiness}+`, label: t('Năm kinh nghiệm', 'Years of craft') },
+                    { value: String(stats.branches), label: t('Chi nhánh', 'Locations') },
+                    { value: `${stats.barbers}+`, label: t('Barber', 'Master barbers') },
+                    { value: `${stats.customers >= 1000 ? Math.round(stats.customers / 1000) + 'K' : stats.customers}+`, label: t('Khách hàng', 'Happy clients') },
+                  ].map(stat => (
+                    <div key={stat.label}>
+                      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 700, color: '#F1ECE1' }}>{stat.value}</div>
+                      <div style={{ fontSize: 12, letterSpacing: '.06em', color: 'rgba(241,236,225,.5)', marginTop: 4 }}>{stat.label}</div>
+                    </div>
+                  ))
+                : [1, 2, 3, 4].map(i => (
+                    <div key={i}>
+                      <div style={{ width: '60%', height: 36, background: 'rgba(241,236,225,.08)', borderRadius: 2 }} />
+                      <div style={{ width: '80%', height: 12, background: 'rgba(241,236,225,.04)', borderRadius: 2, marginTop: 8 }} />
+                    </div>
+                  ))}
             </div>
           </div>
           <div id="gh-hero-media" style={{ position: 'relative' }}>
@@ -697,10 +712,10 @@ export default function HomePage() {
         </div>
       </section></AnimatedSection>
 
-      {/* TOP CUSTOMERS */}
+      {/* TOP CUSTOMERS — podium */}
       <AnimatedSection delay={0.5}><section style={{ background: '#F1ECE1', color: '#15110C', padding: 'clamp(72px,9vw,120px) 28px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 20 }}>
               <span style={{ width: 30, height: 1, background: '#C26A1A' }} />
               <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.26em', textTransform: 'uppercase', color: '#C26A1A' }}>{t('Khách hàng thân thiết', 'Top Clients')}</span>
@@ -709,138 +724,110 @@ export default function HomePage() {
             <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(32px,4.6vw,56px)', lineHeight: 1.05 }}>{t('Khách quen của chúng tôi.', 'Our most loyal clients.')}</h2>
           </div>
 
-          {topCustomers.length > 0 && (
-            <>
-              {/* Top 1 */}
-              <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          {topCustomers.length === 3 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 20 }}>
+              {/* #2 — silver */}
+              <div style={{ flex: 1, maxWidth: 260, textAlign: 'center' }}>
                 <div style={{
-                  display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 16,
-                  padding: '32px 48px', background: 'linear-gradient(135deg,#FFF9E6,#FFF3CC)',
-                  border: '2px solid #D4A843', borderRadius: 12, boxShadow: '0 8px 32px rgba(212,168,67,.18)',
-                  position: 'relative',
+                  width: 80, height: 80, margin: '0 auto 14px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#E5E7EB,#D1D5DB)',
+                  border: '3px solid #9CA3AF',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#4B5563',
+                  boxShadow: '0 4px 20px rgba(156,163,175,.25)',
                 }}>
-                  <div style={{
-                    position: 'absolute', top: -14, left: '50%', marginLeft: -36,
-                    background: '#D4A843', color: '#fff', padding: '4px 16px', borderRadius: 20,
-                    fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
-                  }}>TOP 1</div>
-                  <div style={{
-                    width: 72, height: 72, borderRadius: '50%', background: '#16110C',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: "'Playfair Display', serif", color: '#D4A843', fontWeight: 700, fontSize: 22,
-                  }}>
-                    {topCustomers[0].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
-                  </div>
-                  <div style={{ fontWeight: 800, fontSize: 20, color: '#15110C' }}>{topCustomers[0].name}</div>
-                  <div style={{ fontSize: 14, color: 'rgba(21,17,12,.5)' }}>{t(`${topCustomers[0].totalVisits} lần ghé`, `${topCustomers[0].totalVisits} visits`)}</div>
+                  {topCustomers[1].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#9CA3AF', textTransform: 'uppercase' }}>TOP 2</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, marginTop: 6, color: '#15110C' }}>{topCustomers[1].name}</div>
+                <div style={{ fontSize: 13, color: 'rgba(21,17,12,.5)', marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  {t(`${topCustomers[1].totalVisits} lần`, `${topCustomers[1].totalVisits} visits`)}
                 </div>
               </div>
 
-              {/* Top 2 & 3 */}
-              {topCustomers.length > 1 && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 600, margin: '0 auto 40px' }}>
-                  {[{ rank: 2, label: 'TOP 2', accent: '#9CA3AF', bg: 'linear-gradient(135deg,#F3F4F6,#E5E7EB)', shadow: 'rgba(156,163,175,.18)' },
-                    { rank: 3, label: 'TOP 3', accent: '#CD7F4B', bg: 'linear-gradient(135deg,#FFF5ED,#FFE8D6)', shadow: 'rgba(205,127,75,.18)' },
-                  ].map(({ rank, label, accent, bg, shadow }) => {
-                    const c = topCustomers[rank - 1];
-                    if (!c) return null;
-                    return (
-                      <div key={c.id} style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-                        padding: '24px 20px', background: bg, border: `2px solid ${accent}`, borderRadius: 10,
-                        boxShadow: `0 6px 24px ${shadow}`, position: 'relative',
-                      }}>
-                        <div style={{
-                          position: 'absolute', top: -12, left: '50%', marginLeft: -32,
-                          background: accent, color: '#fff', padding: '3px 14px', borderRadius: 20,
-                          fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase',
-                        }}>{label}</div>
-                        <div style={{
-                          width: 56, height: 56, borderRadius: '50%', background: '#16110C',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontFamily: "'Playfair Display', serif", color: accent, fontWeight: 700, fontSize: 17,
-                        }}>
-                          {c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
-                        </div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: '#15110C' }}>{c.name}</div>
-                        <div style={{ fontSize: 13, color: 'rgba(21,17,12,.5)' }}>{t(`${c.totalVisits} lần ghé`, `${c.totalVisits} visits`)}</div>
-                      </div>
-                    );
-                  })}
+              {/* #1 — gold (tallest) */}
+              <div style={{ flex: 1.15, maxWidth: 300, textAlign: 'center', position: 'relative' }}>
+                <div style={{
+                  width: 24, height: 24, margin: '0 auto -4px', zIndex: 2, position: 'relative',
+                }}>
+                  <svg viewBox="0 0 24 24" fill="#D4A843">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
                 </div>
-              )}
+                <div style={{
+                  width: 100, height: 100, margin: '0 auto 14px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#FFF3CC,#FFE082)',
+                  border: '3px solid #D4A843',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 800, color: '#8B6914',
+                  boxShadow: '0 8px 32px rgba(212,168,67,.3)',
+                }}>
+                  {topCustomers[0].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#D4A843', textTransform: 'uppercase' }}>TOP 1</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, marginTop: 6, color: '#15110C' }}>{topCustomers[0].name}</div>
+                <div style={{ fontSize: 14, color: 'rgba(21,17,12,.5)', marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4A843" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  {t(`${topCustomers[0].totalVisits} lần`, `${topCustomers[0].totalVisits} visits`)}
+                </div>
+              </div>
 
-              {/* Rest */}
-              {topCustomers.length > 3 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 14 }}>
-                  {topCustomers.slice(3).map(c => (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
-                      <span style={{ width: 38, height: 38, borderRadius: '50%', background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display', serif", color: '#EE8A33', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
-                        {c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
-                      </span>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: 13 }}>{c.name}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(21,17,12,.55)', marginTop: 2 }}>{t(`${c.totalVisits} lần ghé`, `${c.totalVisits} visits`)}</div>
-                      </div>
-                    </div>
-                  ))}
+              {/* #3 — bronze */}
+              <div style={{ flex: 1, maxWidth: 260, textAlign: 'center' }}>
+                <div style={{
+                  width: 80, height: 80, margin: '0 auto 14px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#FFE8D6,#FFD4B8)',
+                  border: '3px solid #CD7F4B',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#8B5E3C',
+                  boxShadow: '0 4px 20px rgba(205,127,75,.25)',
+                }}>
+                  {topCustomers[2].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
                 </div>
-              )}
-            </>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#CD7F4B', textTransform: 'uppercase' }}>TOP 3</div>
+                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, marginTop: 6, color: '#15110C' }}>{topCustomers[2].name}</div>
+                <div style={{ fontSize: 13, color: 'rgba(21,17,12,.5)', marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CD7F4B" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  {t(`${topCustomers[2].totalVisits} lần`, `${topCustomers[2].totalVisits} visits`)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {topCustomers.length > 0 && topCustomers.length !== 3 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
+              {topCustomers.map((c, i) => (
+                <div key={c.id} style={{ textAlign: 'center', minWidth: 160, padding: '24px 20px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
+                  <div style={{
+                    width: 64, height: 64, margin: '0 auto 12px', borderRadius: '50%',
+                    background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: "'Playfair Display', serif", color: '#EE8A33', fontWeight: 700, fontSize: 20,
+                  }}>
+                    {c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#15110C' }}>{c.name}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(21,17,12,.5)', marginTop: 4 }}>{t(`${c.totalVisits} lần ghé`, `${c.totalVisits} visits`)}</div>
+                </div>
+              ))}
+            </div>
           )}
 
           {topCustomers.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(21,17,12,.06)' }} />
-              <div style={{ width: 160, height: 20, background: 'rgba(21,17,12,.06)', borderRadius: 4 }} />
-              <div style={{ width: 100, height: 14, background: 'rgba(21,17,12,.04)', borderRadius: 4 }} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: 400, marginTop: 16 }}>
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(21,17,12,.06)' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ width: '60%', height: 13, background: 'rgba(21,17,12,.06)', borderRadius: 2 }} />
-                      <div style={{ width: '35%', height: 10, background: 'rgba(21,17,12,.04)', borderRadius: 2, marginTop: 5 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ textAlign: 'center', minWidth: 160 }}>
+                  <div style={{ width: 80, height: 80, margin: '0 auto 14px', borderRadius: '50%', background: 'rgba(21,17,12,.06)' }} />
+                  <div style={{ width: 100, height: 16, margin: '0 auto', background: 'rgba(21,17,12,.06)', borderRadius: 3 }} />
+                  <div style={{ width: 70, height: 12, margin: '8px auto 0', background: 'rgba(21,17,12,.04)', borderRadius: 3 }} />
+                </div>
+              ))}
             </div>
           )}
         </div>
       </section></AnimatedSection>
 
-      {/* CAREERS */}
-      <AnimatedSection delay={0.6}><section id="careers" style={{ background: '#0B1620', padding: 'clamp(72px,9vw,128px) 28px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(80% 120% at 100% 0%,#16110C 0%,transparent 60%)' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 48, alignItems: 'center' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22 }}>
-              <span style={{ width: 38, height: 1, background: '#EE8A33' }} />
-              <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.26em', textTransform: 'uppercase', color: '#EE8A33' }}>{t('Tuyển dụng', 'Careers')}</span>
-            </div>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(32px,4.6vw,54px)', lineHeight: 1.05, color: '#F1ECE1' }}>{t('Phát triển tay nghề cùng GOODHAIR.', 'Build your craft at GOODHAIR.')}</h2>
-            <p style={{ marginTop: 22, maxWidth: 520, fontSize: 16, lineHeight: 1.7, color: 'rgba(241,236,225,.62)', fontWeight: 300 }}>
-              {t('Chúng tôi đang tuyển master barber, barber junior và lễ tân cho tất cả chi nhánh. Lương cạnh tranh, đào tạo bài bản, và một đội ngũ thực sự nghiêm túc với nghề.', 'We\'re hiring master barbers, junior barbers and front-desk staff across all branches. Competitive pay, real training, and a team that takes the craft seriously.')}
-            </p>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[
-              { title: 'Master Barber', time: t('Toàn thời gian · HCM & Hà Nội', 'Full-time · HCM & Hà Nội'), count: t('3 vị trí', '3 openings') },
-              { title: 'Junior Barber', time: t('Toàn thời gian · Đà Nẵng', 'Full-time · Đà Nẵng'), count: t('2 vị trí', '2 openings') },
-              { title: 'Lễ tân / Front Desk', time: t('Bán thời gian · Thảo Điền', 'Part-time · Thảo Điền'), count: t('1 vị trí', '1 opening') },
-            ].map(job => (
-              <div key={job.title} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '20px 24px', background: '#0F1E2B', border: '1px solid rgba(238,138,51,.16)', borderRadius: 3 }}>
-                <div>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: '#F1ECE1' }}>{job.title}</h3>
-                  <p style={{ fontSize: 12.5, color: 'rgba(241,236,225,.55)', marginTop: 3 }}>{job.time}</p>
-                </div>
-                <span style={{ fontSize: 12, color: '#EE8A33', whiteSpace: 'nowrap' }}>{job.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section></AnimatedSection>
+
 
       {/* BOOKING CTA */}
       <AnimatedSection delay={0.7}><section style={{ background: 'linear-gradient(150deg,#0F2233 0%,#0A131D 100%)', borderTop: '1px solid rgba(238,138,51,.2)', borderBottom: '1px solid rgba(238,138,51,.2)', padding: 'clamp(72px,10vw,130px) 28px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
@@ -888,12 +875,8 @@ export default function HomePage() {
               <h4 style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(238,138,51,.6)', margin: '0 0 16px' }}>{t('Liên hệ', 'Contact')}</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <span style={{ fontSize: 13, color: 'rgba(241,236,225,.45)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(238,138,51,.4)" strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                  65 Lê Lợi, Quận 1, HCM
-                </span>
-                <span style={{ fontSize: 13, color: 'rgba(241,236,225,.45)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(238,138,51,.4)" strokeWidth="1.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-                  1900 9999 88
+                  {stats?.contactPhone ?? '034 989 4039'}
                 </span>
               </div>
             </div>

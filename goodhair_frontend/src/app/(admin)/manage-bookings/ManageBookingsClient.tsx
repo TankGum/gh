@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { DatePicker, Select, Spin, App } from 'antd';
 import FilterBar from '@/components/ui/FilterBar';
 import FilterSelect from '@/components/ui/FilterSelect';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { fetchBookings, createBooking, updateBooking, deleteBooking } from '@/services/bookings.api';
 import { fetchEmployees } from '@/services/employees.api';
 import { fetchBranches } from '@/services/branches.api';
@@ -83,8 +84,10 @@ export default function ManageBookingsClient() {
 
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
   const [modalData, setModalData] = useState<Partial<Booking> | null>(null);
+  const [originalStatus, setOriginalStatus] = useState<BookingStatus | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Booking | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const isMobile = useIsMobile();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [tooltipData, setTooltipData] = useState<{ b: Booking; timeRange: string; svcNames: string; x: number; y: number } | null>(null);
 
@@ -206,6 +209,7 @@ export default function ManageBookingsClient() {
   const openEdit = (booking: Booking) => {
     setFormErrors({});
     setModalData({ ...booking });
+    setOriginalStatus(booking.status);
     setModalMode('edit');
   };
 
@@ -324,7 +328,7 @@ export default function ManageBookingsClient() {
   }, [services]);
 
     return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Page header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
         <div>
@@ -367,52 +371,57 @@ export default function ManageBookingsClient() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
       ) : (
-        <div style={{ background: '#0F1E2B', border: '1px solid rgba(238,138,51,.16)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <div style={{ display: 'flex', minWidth: 760 }}>
-              {/* Time gutter */}
-              <div style={{ width: 58, flexShrink: 0, borderRight: '1px solid rgba(238,138,51,.1)' }}>
-                <div style={{ height: 66, borderBottom: '1px solid rgba(238,138,51,.14)' }} />
-                {hoursRange.slots.map(s => {
-                  const isWhole = s === Math.floor(s);
-                  const mm = isWhole ? '00' : '30';
-                  return (
-                    <div key={s} style={{ height: hoursRange.slotHeight, position: 'relative', borderBottom: isWhole ? '1px solid rgba(238,138,51,.14)' : '1px solid rgba(238,138,51,.05)' }}>
-                      {isWhole && <span style={{ position: 'absolute', top: 2, right: 8, fontSize: 11, color: 'rgba(241,236,225,.4)', fontVariantNumeric: 'tabular-nums' }}>{pad2(s)}:00</span>}
-                      {!isWhole && <span style={{ position: 'absolute', top: 2, right: 8, fontSize: 9, color: 'rgba(241,236,225,.2)', fontVariantNumeric: 'tabular-nums' }}>{pad2(Math.floor(s))}:{mm}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Barber columns */}
-              {filteredBarbers.length === 0 ? (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 80, color: '#64748b', fontSize: 14 }}>
-                  Không có barber phù hợp
-                </div>
-              ) : (
-                filteredBarbers.map(emp => {
+        <div style={{ flex: 1, minHeight: 0, background: '#0F1E2B', border: '1px solid rgba(238,138,51,.16)', borderRadius: 10, overflow: 'auto' }}>
+          {filteredBarbers.length === 0 ? (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 14 }}>
+              Không có barber phù hợp
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 760 }}>
+              {/* Sticky header row */}
+              <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 2, borderBottom: '1px solid rgba(238,138,51,.14)', background: '#0F1E2B' }}>
+                <div style={{ width: 58, flexShrink: 0, background: '#0F1E2B' }} />
+                {filteredBarbers.map(emp => {
                   const branch = branchMap.get(emp.branchId || '');
                   const empBookings = bookingsByEmployee.get(emp.id) || [];
                   const initials = emp.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
                   return (
-                    <div key={emp.id} style={{ flex: 1, minWidth: 178, borderRight: '1px solid rgba(238,138,51,.08)' }}>
-                      {/* Barber header */}
-                      <div style={{ height: 66, borderBottom: '1px solid rgba(238,138,51,.14)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', background: '#0B1620' }}>
-                        {emp.avatarUrl ? (
-                          <img src={emp.avatarUrl} alt={emp.name} style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                        ) : (
-                          <span style={{ width: 34, height: 34, borderRadius: '50%', background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display',serif", fontWeight: 700, color: '#EE8A33', fontSize: 12, flexShrink: 0 }}>
-                            {initials}
-                          </span>
-                        )}
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#F1ECE1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</div>
-                          <div style={{ fontSize: 10.5, color: 'rgba(241,236,225,.45)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {branch?.name || ''} · {empBookings.length} lịch
-                          </div>
+                    <div key={emp.id} style={{ flex: 1, minWidth: 178, borderRight: '1px solid rgba(238,138,51,.08)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', height: 66, background: '#0B1620' }}>
+                      {emp.avatarUrl ? (
+                        <img src={emp.avatarUrl} alt={emp.name} style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      ) : (
+                        <span style={{ width: 34, height: 34, borderRadius: '50%', background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Playfair Display',serif", fontWeight: 700, color: '#EE8A33', fontSize: 12, flexShrink: 0 }}>
+                          {initials}
+                        </span>
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#F1ECE1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</div>
+                        <div style={{ fontSize: 10.5, color: 'rgba(241,236,225,.45)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {branch?.name || ''} · {empBookings.length} lịch
                         </div>
                       </div>
-                      {/* Time cells */}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Time slots body — scrolls vertically under sticky header */}
+              <div style={{ display: 'flex' }}>
+                <div style={{ width: 58, flexShrink: 0, borderRight: '1px solid rgba(238,138,51,.1)' }}>
+                  {hoursRange.slots.map(s => {
+                    const isWhole = s === Math.floor(s);
+                    const mm = isWhole ? '00' : '30';
+                    return (
+                      <div key={s} style={{ height: hoursRange.slotHeight, position: 'relative', borderBottom: isWhole ? '1px solid rgba(238,138,51,.14)' : '1px solid rgba(238,138,51,.05)' }}>
+                        {isWhole && <span style={{ position: 'absolute', top: 2, right: 8, fontSize: 11, color: 'rgba(241,236,225,.4)', fontVariantNumeric: 'tabular-nums' }}>{pad2(s)}:00</span>}
+                        {!isWhole && <span style={{ position: 'absolute', top: 2, right: 8, fontSize: 9, color: 'rgba(241,236,225,.2)', fontVariantNumeric: 'tabular-nums' }}>{pad2(Math.floor(s))}:{mm}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                {filteredBarbers.map(emp => {
+                  const empBookings = bookingsByEmployee.get(emp.id) || [];
+                  return (
+                    <div key={emp.id} style={{ flex: 1, minWidth: 178, borderRight: '1px solid rgba(238,138,51,.08)' }}>
                       <div style={{ position: 'relative', height: hoursRange.slots.length * hoursRange.slotHeight }}>
                         {hoursRange.slots.map(s => {
                           const m = s === Math.floor(s) ? 0 : 30;
@@ -433,7 +442,6 @@ export default function ManageBookingsClient() {
                             />
                           );
                         })}
-                        {/* Booking cards */}
                         {empBookings.map(b => {
                           const top = (minOf(b.startTime) - hoursRange.gridMin) * hoursRange.pxPerMin;
                           const h = Math.max(b.durationMinutes * hoursRange.pxPerMin - 5, 34);
@@ -449,7 +457,7 @@ export default function ManageBookingsClient() {
                               onMouseEnter={(e) => setTooltipData({ b, timeRange, svcNames, x: e.clientX, y: e.clientY })}
                               onMouseMove={(e) => setTooltipData(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
                               onMouseLeave={() => setTooltipData(null)}
-                              onClick={() => !completed && openEdit(b)}
+                              onClick={() => openEdit(b)}
                               style={{ position: 'absolute', left: 6, right: 6, overflow: 'hidden', cursor: completed ? 'default' : 'pointer', borderRadius: 6, padding: '7px 9px', top, height: h, background: completed ? '#1a2a38' : '#15293b', borderLeft: `3px solid ${accent}`, boxShadow: '0 4px 12px rgba(0,0,0,.3)', opacity: faded ? 0.55 : 1 }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
@@ -469,157 +477,196 @@ export default function ManageBookingsClient() {
                       </div>
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
+          )}
           </div>
-        </div>
       )}
-
-      <p style={{ fontSize: 12, color: 'rgba(241,236,225,.4)', marginTop: 14 }}>Bấm vào ô trống để thêm lịch · Bấm vào thẻ để sửa · Bấm ✕ để xoá</p>
 
       {/* Add/Edit modal */}
       <Modal
         open={!!modalMode}
-        onClose={() => { setModalMode(null); setModalData(null); setFormErrors({}); }}
+        onClose={() => { setModalMode(null); setModalData(null); setOriginalStatus(null); setFormErrors({}); }}
         title={modalMode === 'add' ? 'Tạo lịch hẹn' : 'Sửa lịch hẹn'}
+        style={{ maxWidth: 580 }}
       >
-        {modalData && (
+        {modalData && (() => {
+          const readonly = originalStatus === 'completed';
+          return (
           <div style={{ padding: '8px 0' }}>
-            {/* Customer name */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Tên khách hàng</label>
-              <input
-                value={modalData.customerName || ''}
-                onChange={e => { setFormErrors(prev => ({ ...prev, customerName: '' })); setModalData({ ...modalData, customerName: e.target.value }); }}
-                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.customerName ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none' }}
-              />
-              {formErrors.customerName && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerName}</span>}
+            {/* Customer info row */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Tên khách hàng</label>
+                <input
+                  value={modalData.customerName || ''}
+                  disabled={readonly}
+                  onChange={e => { setFormErrors(prev => ({ ...prev, customerName: '' })); setModalData({ ...modalData, customerName: e.target.value }); }}
+                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerName ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
+                />
+                {formErrors.customerName && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerName}</span>}
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Số điện thoại</label>
+                <input
+                  value={modalData.customerPhone || ''}
+                  disabled={readonly}
+                  onChange={e => { setFormErrors(prev => ({ ...prev, customerPhone: '' })); setModalData({ ...modalData, customerPhone: e.target.value }); }}
+                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerPhone ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
+                />
+                {formErrors.customerPhone && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerPhone}</span>}
+              </div>
             </div>
-            {/* Phone */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Số điện thoại</label>
-              <input
-                value={modalData.customerPhone || ''}
-                onChange={e => { setFormErrors(prev => ({ ...prev, customerPhone: '' })); setModalData({ ...modalData, customerPhone: e.target.value }); }}
-                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.customerPhone ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none' }}
-              />
-              {formErrors.customerPhone && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerPhone}</span>}
-            </div>
+
             {/* Services */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Dịch vụ</label>
-              <Select
-                mode="multiple"
-                value={modalData.serviceIds || []}
-                onChange={(ids: string[]) => {
-                  setFormErrors(prev => ({ ...prev, serviceIds: '' }));
-                  const total = ids.reduce((sum, sid) => sum + (serviceMap.get(sid)?.price || 0), 0);
-                  const dur = ids.reduce((sum, sid) => sum + (serviceMap.get(sid)?.durationMinutes || 0), 0);
-                  setModalData({ ...modalData, serviceIds: ids, total, durationMinutes: dur });
-                }}
-                style={{ width: '100%' }}
-                placeholder="Chọn dịch vụ"
-                options={serviceOpts}
-              />
-              {formErrors.serviceIds && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.serviceIds}</span>}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Dịch vụ</label>
+              <div style={{ border: `1px solid ${formErrors.serviceIds ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
+                <Select
+                  mode="multiple"
+                  size="large"
+                  variant="borderless"
+                  value={modalData.serviceIds || []}
+                  disabled={readonly}
+                  onChange={(ids: string[]) => {
+                    setFormErrors(prev => ({ ...prev, serviceIds: '' }));
+                    const total = ids.reduce((sum, sid) => sum + (serviceMap.get(sid)?.price || 0), 0);
+                    const dur = ids.reduce((sum, sid) => sum + (serviceMap.get(sid)?.durationMinutes || 0), 0);
+                    setModalData({ ...modalData, serviceIds: ids, total, durationMinutes: dur });
+                  }}
+                  style={{ width: '100%' }}
+                  placeholder="Chọn dịch vụ"
+                  options={serviceOpts}
+                />
+              </div>
+              {formErrors.serviceIds && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.serviceIds}</span>}
             </div>
-            {/* Branch */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Chi nhánh</label>
-              <select
-                value={modalData.branchId || ''}
-                onChange={e => { setFormErrors(prev => ({ ...prev, branchId: '' })); const branchId = e.target.value || null; setModalData({ ...modalData, branchId, employeeId: null }); }}
-                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.branchId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
-              >
-                <option value="">Chọn chi nhánh</option>
-                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-              {formErrors.branchId && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.branchId}</span>}
+            {/* Branch / Barber */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Chi nhánh</label>
+                <div style={{ border: `1px solid ${formErrors.branchId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
+                  <Select
+                    value={modalData.branchId || undefined}
+                    disabled={readonly}
+                    onChange={(val: string | undefined) => { setFormErrors(prev => ({ ...prev, branchId: '' })); setModalData({ ...modalData, branchId: val || null, employeeId: null }); }}
+                    style={{ width: '100%' }}
+                    variant="borderless"
+                    placeholder="Chọn chi nhánh"
+                    allowClear
+                    options={branches.map(b => ({ label: b.name, value: b.id }))}
+                  />
+                </div>
+                {formErrors.branchId && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.branchId}</span>}
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Barber</label>
+                <div style={{ border: `1px solid ${formErrors.employeeId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
+                  <Select
+                    value={modalData.employeeId || undefined}
+                    disabled={readonly}
+                    onChange={(val: string | undefined) => { setFormErrors(prev => ({ ...prev, employeeId: '' })); setModalData({ ...modalData, employeeId: val || null }); }}
+                    style={{ width: '100%' }}
+                    variant="borderless"
+                    placeholder="Chọn barber"
+                    allowClear
+                    options={modalBarberOpts}
+                  />
+                </div>
+                {formErrors.employeeId && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.employeeId}</span>}
+              </div>
             </div>
-            {/* Barber */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Barber</label>
-              <select
-                value={modalData.employeeId || ''}
-                onChange={e => { setFormErrors(prev => ({ ...prev, employeeId: '' })); setModalData({ ...modalData, employeeId: e.target.value || null }); }}
-                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.employeeId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
-              >
-                <option value="">Chọn barber</option>
-                {modalBarberOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              {formErrors.employeeId && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.employeeId}</span>}
+
+            {/* Date / Time / Status / Total */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ngày</label>
+                <input
+                  type="date"
+                  value={modalData.date || ''}
+                  disabled={readonly}
+                  min={today}
+                  max={maxDate}
+                  onChange={e => {
+                    setFormErrors(prev => ({ ...prev, date: '' }));
+                    const val = e.target.value;
+                    if (val < today) return setModalData({ ...modalData, date: today });
+                    if (val > maxDate) return setModalData({ ...modalData, date: maxDate });
+                    setModalData({ ...modalData, date: val });
+                  }}
+                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.date ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', colorScheme: 'dark', cursor: readonly ? 'default' : undefined }}
+                />
+                {formErrors.date && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.date}</span>}
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Giờ bắt đầu</label>
+                <div style={{ border: `1px solid ${formErrors.startTime ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
+                  <Select
+                    value={modalData.startTime || '09:00'}
+                    disabled={readonly}
+                    onChange={(val: string) => { setFormErrors(prev => ({ ...prev, startTime: '' })); setModalData({ ...modalData, startTime: val }); }}
+                    style={{ width: '100%' }}
+                    variant="borderless"
+                    options={modalSlotOpts}
+                  />
+                </div>
+                {formErrors.startTime && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.startTime}</span>}
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Trạng thái</label>
+                <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+                  <Select
+                    value={modalData.status || 'pending'}
+                    disabled={readonly}
+                    onChange={(val: BookingStatus) => setModalData({ ...modalData, status: val })}
+                    style={{ width: '100%' }}
+                    variant="borderless"
+                    options={statusOpts}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Tổng (₫)</label>
+                <input
+                  type="text"
+                  readOnly
+                  value={formatCurrency(modalData.total || 0)}
+                  style={{ width: '100%', background: '#0a151f', border: '1px solid rgba(238,138,51,.15)', color: '#EE8A33', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, outline: 'none', cursor: 'not-allowed' }}
+                />
+              </div>
             </div>
-            {/* Date */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Ngày</label>
-              <input
-                type="date"
-                value={modalData.date || ''}
-                min={today}
-                max={maxDate}
-                onChange={e => {
-                  setFormErrors(prev => ({ ...prev, date: '' }));
-                  const val = e.target.value;
-                  if (val < today) return setModalData({ ...modalData, date: today });
-                  if (val > maxDate) return setModalData({ ...modalData, date: maxDate });
-                  setModalData({ ...modalData, date: val });
-                }}
-                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.date ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', colorScheme: 'dark' }}
-              />
-              {formErrors.date && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.date}</span>}
-            </div>
-            {/* Start time */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Giờ bắt đầu</label>
-              <select
-                value={modalData.startTime || '09:00'}
-                onChange={e => { setFormErrors(prev => ({ ...prev, startTime: '' })); setModalData({ ...modalData, startTime: e.target.value }); }}
-                style={{ width: '100%', background: '#0B1620', border: `1px solid ${formErrors.startTime ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
-              >
-                {modalSlotOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              {formErrors.startTime && <span style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.startTime}</span>}
-            </div>
-            {/* Status */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Trạng thái</label>
-              <select
-                value={modalData.status || 'pending'}
-                onChange={e => setModalData({ ...modalData, status: e.target.value as BookingStatus })}
-                style={{ width: '100%', background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', appearance: 'none' }}
-              >
-                {statusOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            {/* Total */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(241,236,225,.7)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.05em' }}>Tổng (₫)</label>
-              <input
-                type="text"
-                readOnly
-                value={formatCurrency(modalData.total || 0)}
-                style={{ width: '100%', background: '#0a151f', border: '1px solid rgba(238,138,51,.15)', color: '#EE8A33', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, outline: 'none', cursor: 'not-allowed' }}
-              />
-            </div>
+
             {/* Buttons */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
+            {readonly ? (
               <button
                 onClick={() => { setModalMode(null); setModalData(null); setFormErrors({}); }}
-                style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                style={{ width: '100%', background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Đóng
+              </button>
+            ) : (
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => { setModalMode(null); setModalData(null); setOriginalStatus(null); setFormErrors({}); }}
+                style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background .15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(238,138,51,.08)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
                 Huỷ
               </button>
               <button
                 onClick={handleSave}
                 disabled={submitting}
-                style={{ flex: 1, background: '#EE8A33', color: '#fff', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
+                style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.5 : 1, transition: 'opacity .15s' }}
               >
                 {submitting ? 'Đang lưu...' : 'Lưu'}
               </button>
             </div>
+            )}
           </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* Delete confirm */}

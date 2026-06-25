@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ActivityAction, BookingStatus, PermissionModule
 from app.core.diff import compute_changes
-from app.core.exceptions import ConflictError, NotFoundError
+from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.db.repositories.booking import BookingRepository
 from app.db.repositories.booking_service_item import BookingServiceItemRepository
 from app.db.repositories.customer import CustomerRepository
@@ -93,6 +93,11 @@ class BookingService:
 
     async def update(self, booking_id: UUID, data: BookingUpdate) -> Booking:
         booking = await self.get_by_id(booking_id)
+        if booking.status == BookingStatus.COMPLETED:
+            raise BadRequestError(
+                message_key="errors.booking.completed",
+                detail={"message": "Không thể cập nhật lịch hẹn đã hoàn thành"},
+            )
         effective_employee_id = data.employee_id if data.employee_id is not None else booking.employee_id
         effective_date = data.date if data.date is not None else booking.date
         effective_start = data.start_time if data.start_time is not None else booking.start_time

@@ -9,15 +9,20 @@ import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import BranchStatus, EmploymentStatus, ServiceStatus
+from app.core.constants import BranchStatus, CONTACT_PHONE, EmploymentStatus, FOUNDING_YEAR, HAPPY_CLIENTS, ServiceStatus
 from app.core.exceptions import ConflictError
 from app.db.repositories.booking import BookingRepository
 from app.db.repositories.booking_service_item import BookingServiceItemRepository
 from app.db.repositories.customer import CustomerRepository
 from app.db.repositories.role import RoleRepository
 from app.db.session import get_db_session
+from app.models.branch import Branch
+from app.models.customer import Customer
+from app.models.employee import Employee
+from app.models.service import Service
 from app.schemas.base import PageParams, PaginatedResponse
 from app.schemas.public import (
     PublicAvailableSlotsResponse,
@@ -28,6 +33,7 @@ from app.schemas.public import (
     PublicCustomerRead,
     PublicEmployeeRead,
     PublicServiceRead,
+    PublicStatsResponse,
 )
 from app.services.branches.service import BranchService
 from app.services.customers.service import CustomerService
@@ -162,4 +168,43 @@ async def create_public_booking(
         date=booking.date,
         start_time=booking.start_time,
         total=booking.total,
+    )
+
+
+@router.get("/stats", response_model=PublicStatsResponse)
+async def get_public_stats(
+    session: AsyncSession = Depends(get_db_session),
+) -> PublicStatsResponse:
+    branches = await session.scalar(
+        select(func.count()).select_from(Branch).where(
+            Branch.status == BranchStatus.OPEN,
+            Branch.deleted_at.is_(None),
+        )
+    ) or 0
+
+    services = await session.scalar(
+        select(func.count()).select_from(Service).where(
+            Service.status == ServiceStatus.ACTIVE,
+            Service.deleted_at.is_(None),
+        )
+    ) or 0
+
+    barbers = await session.scalar(
+        select(func.count()).select_from(Employee).where(
+            Employee.status == EmploymentStatus.ACTIVE,
+            Employee.deleted_at.is_(None),
+        )
+    ) or 0
+
+    customers = HAPPY_CLIENTS
+
+    years_in_business = max(1, datetime.date.today().year - FOUNDING_YEAR)
+
+    return PublicStatsResponse(
+        branches=branches,
+        services=services,
+        barbers=barbers,
+        customers=customers,
+        years_in_business=years_in_business,
+        contact_phone=CONTACT_PHONE,
     )
