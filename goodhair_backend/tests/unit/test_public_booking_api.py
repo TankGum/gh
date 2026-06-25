@@ -65,15 +65,22 @@ def _fake_customer(**kwargs: Any) -> MagicMock:
 # Payload factory
 # ---------------------------------------------------------------------------
 
+_DEFAULT_EMP_ID = str(uuid.uuid4())
+_DEFAULT_BRANCH_ID = str(uuid.uuid4())
+_DEFAULT_SVC_ID = str(uuid.uuid4())
+
+
 def payload(**overrides: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "customerName": "Nguyen Van A",
         "customerPhone": "0901234567",
+        "employeeId": _DEFAULT_EMP_ID,
+        "branchId": _DEFAULT_BRANCH_ID,
         "date": datetime.date.today().isoformat(),
         "startTime": "09:00:00",
         "durationMinutes": 30,
         "total": 100000,
-        "serviceIds": [],
+        "serviceIds": [_DEFAULT_SVC_ID],
     }
     base.update(overrides)
     return base
@@ -135,16 +142,6 @@ class TestPublicBookingHappyPath:
             resp = await client.post("/api/v1/public/bookings", json=payload())
         assert resp.json()["code"] == "GH-0001"
 
-    async def test_no_employee_skips_overlap_check(self, client: AsyncClient) -> None:
-        with happy_path_patches() as mocks:
-            resp = await client.post(
-                "/api/v1/public/bookings",
-                json=payload(employeeId=None),
-            )
-        assert resp.status_code == 201
-        # check_overlap should NOT have been called because employee_id is null
-        mocks["overlap"].assert_not_called()
-
     async def test_with_employee_calls_overlap_check(self, client: AsyncClient) -> None:
         emp_id = str(uuid.uuid4())
         with happy_path_patches() as mocks:
@@ -176,17 +173,6 @@ class TestPublicBookingHappyPath:
         assert resp.status_code == 201
         mock_new_cust.assert_not_called()
         mock_update.assert_called_once()
-
-    async def test_zero_duration_skips_overlap_check(self, client: AsyncClient) -> None:
-        emp_id = str(uuid.uuid4())
-        with happy_path_patches() as mocks:
-            resp = await client.post(
-                "/api/v1/public/bookings",
-                json=payload(employeeId=emp_id, durationMinutes=0),
-            )
-        assert resp.status_code == 201
-        # duration 0 → condition `payload.duration_minutes > 0` is False → no check
-        mocks["overlap"].assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +219,9 @@ class TestPublicBookingValidation:
         "customerPhone",
         "date",
         "startTime",
+        "employeeId",
+        "branchId",
+        "serviceIds",
     ])
     async def test_missing_required_field_returns_422(
         self, client: AsyncClient, missing_field: str
@@ -240,6 +229,14 @@ class TestPublicBookingValidation:
         p = payload()
         del p[missing_field]
         resp = await client.post("/api/v1/public/bookings", json=p)
+        assert resp.status_code == 422
+
+    async def test_empty_service_ids_returns_422(self, client: AsyncClient) -> None:
+        resp = await client.post("/api/v1/public/bookings", json=payload(serviceIds=[]))
+        assert resp.status_code == 422
+
+    async def test_zero_duration_returns_422(self, client: AsyncClient) -> None:
+        resp = await client.post("/api/v1/public/bookings", json=payload(durationMinutes=0))
         assert resp.status_code == 422
 
     async def test_invalid_date_format_returns_422(self, client: AsyncClient) -> None:

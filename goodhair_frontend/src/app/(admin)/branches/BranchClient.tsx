@@ -253,7 +253,7 @@ function BranchForm({
             {readonlyMonthlyRevenue !== undefined && (
               <div>
                 <div style={{ fontSize: 11, color: 'rgba(241,236,225,.5)', marginBottom: 4 }}>Doanh thu tháng (tự động)</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#EE8A33' }}>{readonlyMonthlyRevenue.toLocaleString('vi-VN')} ₫</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#EE8A33' }}>{new Intl.NumberFormat('vi-VN').format(readonlyMonthlyRevenue)} VND</div>
               </div>
             )}
           </div>
@@ -333,12 +333,7 @@ function BranchCard({
         <div className="flex items-center justify-between">
           <div>
             <div className="text-lg font-bold" style={{ color: '#ee8a33' }}>
-              {branch.monthlyRevenue >= 1_000_000
-                ? `${(branch.monthlyRevenue / 1_000_000).toFixed(1)}tr`
-                : branch.monthlyRevenue >= 1_000
-                  ? `${(branch.monthlyRevenue / 1_000).toFixed(0)}k`
-                  : branch.monthlyRevenue.toLocaleString('vi-VN')}
-              ₫
+              {new Intl.NumberFormat('vi-VN').format(branch.monthlyRevenue)} VND
             </div>
             <div className="text-[11px] text-slate-500">Doanh thu tháng này</div>
           </div>

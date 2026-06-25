@@ -52,13 +52,11 @@ function pad2(n: number): string {
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+  return new Intl.NumberFormat('vi-VN').format(value) + ' VND';
 }
 
 function formatShort(value: number): string {
-  if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
-  if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
-  return String(value);
+  return new Intl.NumberFormat('vi-VN').format(value) + ' VND';
 }
 
 export default function ManageBookingsClient() {

@@ -9,8 +9,8 @@ from app.core.exceptions import NotFoundError
 from app.services.roles.service import RoleService
 
 _ROLE_FIELDS = [
-    "id", "name", "key", "description", "scope", "color",
-    "is_system", "employee_count", "permissions",
+    "id", "name", "description", "is_system", "is_bookable",
+    "employee_count", "permissions",
 ]
 
 
@@ -18,11 +18,9 @@ def _make_role() -> MagicMock:
     r = MagicMock(spec=_ROLE_FIELDS)
     r.id = uuid.uuid4()
     r.name = "Barber"
-    r.key = "barber"
     r.description = "A barber role"
-    r.scope = None
-    r.color = "#ff0000"
     r.is_system = False
+    r.is_bookable = False
     r.employee_count = 0
     r.permissions = {}
     return r
@@ -89,14 +87,6 @@ async def test_update_role_not_found_404(authed_client: AsyncClient) -> None:
 async def test_create_role_missing_name_422(authed_client: AsyncClient) -> None:
     resp = await authed_client.post(
         "/api/v1/roles",
-        json={"key": "barber"},
-    )
-    assert resp.status_code == 422
-
-
-async def test_create_role_missing_key_422(authed_client: AsyncClient) -> None:
-    resp = await authed_client.post(
-        "/api/v1/roles",
-        json={"name": "Barber"},
+        json={},
     )
     assert resp.status_code == 422

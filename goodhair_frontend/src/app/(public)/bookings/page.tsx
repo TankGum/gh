@@ -20,8 +20,8 @@ import {
 const playfair = Playfair_Display({ subsets: ['latin'], weight: ['500', '600', '700', '800'] });
 const hanken = Hanken_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800'] });
 
-const f = (n: number) => n.toLocaleString('vi-VN') + 'đ';
-const fk = (n: number) => Math.round(n / 1000) + 'K';
+const f = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' VND';
+const fk = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' VND';
 
 const toTimeStr = (t: string | null) => {
   if (!t) return '';
@@ -258,7 +258,7 @@ export default function HomePage() {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'rgba(241,236,225,.5)', fontSize: 13.5 }}>{t('Chi nhánh', 'Branch')}</span><span style={{ fontWeight: 600, fontSize: 13.5 }}>{branch?.name.replace('GOODHAIR ', '') || '—'}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'rgba(241,236,225,.5)', fontSize: 13.5 }}>Barber</span><span style={{ fontWeight: 600, fontSize: 13.5 }}>{barberName}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'rgba(241,236,225,.5)', fontSize: 13.5 }}>{t('Thời gian', 'Time')}</span><span style={{ fontWeight: 600, fontSize: 13.5 }}>{sDateTime}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'rgba(241,236,225,.5)', fontSize: 13.5 }}>{t('Tổng cộng', 'Total')}</span><span style={{ fontWeight: 700, fontSize: 13.5, color: styles.accent }}>{total ? f(total) : '0đ'}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'rgba(241,236,225,.5)', fontSize: 13.5 }}>{t('Tổng cộng', 'Total')}</span><span style={{ fontWeight: 700, fontSize: 13.5, color: styles.accent }}>{total ? f(total) : '0 VND'}</span></div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 30, flexWrap: 'wrap' }}>
@@ -586,7 +586,7 @@ export default function HomePage() {
           <div style={{ padding: '18px 22px', borderTop: '1px solid rgba(238,138,51,.18)', background: '#0B1620' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
               <span style={{ fontSize: 13, color: 'rgba(241,236,225,.6)' }}>{t('Tổng cộng', 'Total')}</span>
-              <span style={{ fontFamily: playfair.style.fontFamily, fontSize: 26, fontWeight: 700, color: styles.text }}>{total ? f(total) : '0đ'}</span>
+              <span style={{ fontFamily: playfair.style.fontFamily, fontSize: 26, fontWeight: 700, color: styles.text }}>{total ? f(total) : '0 VND'}</span>
             </div>
             <div style={{ textAlign: 'right', fontSize: 11.5, color: 'rgba(241,236,225,.4)', marginBottom: 16 }}>{durLabel ? t('Thời lượng ~', 'Duration ~') + durLabel : t('Chưa chọn dịch vụ', 'No services selected')}</div>
             <button onClick={onNext} disabled={!canNext || submitting} style={{ width: '100%', padding: 15, borderRadius: 3, fontFamily: hanken.style.fontFamily, fontSize: 14, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', border: 'none', cursor: canNext && !submitting ? 'pointer' : 'not-allowed', ...(canNext && !submitting ? { background: styles.accent, color: '#0B1620' } : { background: 'rgba(168,150,120,.32)', color: 'rgba(255,255,255,.5)' }) }}>

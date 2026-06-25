@@ -15,61 +15,85 @@ from app.schemas.public import (
 
 
 class TestPublicBookingCreate:
-    def test_minimal_valid(self) -> None:
-        b = PublicBookingCreate(
+    def _base(self, **overrides):
+        import uuid as _uuid
+        base = dict(
             customer_name="Nguyen Van A",
             customer_phone="0901234567",
+            employee_id=_uuid.uuid4(),
+            branch_id=_uuid.uuid4(),
             date=datetime.date(2026, 7, 1),
             start_time=datetime.time(9, 0),
+            duration_minutes=30,
+            total=150000,
+            service_ids=[_uuid.uuid4()],
         )
-        assert b.duration_minutes == 0
-        assert b.total == 0
-        assert b.employee_id is None
-        assert b.branch_id is None
-        assert b.service_ids == []
+        base.update(overrides)
+        return base
+
+    def test_minimal_valid(self) -> None:
+        b = PublicBookingCreate(**self._base())
+        assert b.duration_minutes == 30
+        assert b.total == 150000
+        assert len(b.service_ids) == 1
 
     def test_full_valid(self) -> None:
         import uuid
         emp_id = uuid.uuid4()
-        b = PublicBookingCreate(
-            customer_name="Test",
-            customer_phone="0912345678",
+        b = PublicBookingCreate(**self._base(
             employee_id=emp_id,
-            date=datetime.date(2026, 8, 15),
-            start_time=datetime.time(14, 30),
             duration_minutes=60,
-            total=150000,
-            service_ids=[uuid.uuid4()],
-        )
+            total=300000,
+            service_ids=[uuid.uuid4(), uuid.uuid4()],
+        ))
         assert b.employee_id == emp_id
         assert b.duration_minutes == 60
-        assert b.total == 150000
-        assert len(b.service_ids) == 1
+        assert b.total == 300000
+        assert len(b.service_ids) == 2
 
     def test_missing_customer_name_raises(self) -> None:
         with pytest.raises(ValidationError):
-            PublicBookingCreate(  # type: ignore[call-arg]
-                customer_phone="09x",
-                date=datetime.date.today(),
-                start_time=datetime.time(9, 0),
-            )
+            d = self._base()
+            del d["customer_name"]
+            PublicBookingCreate(**d)  # type: ignore[arg-type]
 
     def test_missing_date_raises(self) -> None:
         with pytest.raises(ValidationError):
-            PublicBookingCreate(  # type: ignore[call-arg]
-                customer_name="A",
-                customer_phone="09x",
-                start_time=datetime.time(9, 0),
-            )
+            d = self._base()
+            del d["date"]
+            PublicBookingCreate(**d)  # type: ignore[arg-type]
 
     def test_invalid_date_format_raises(self) -> None:
         with pytest.raises(ValidationError):
-            PublicBookingCreate(
-                customer_name="A",
-                customer_phone="09x",
-                date="not-a-date",  # type: ignore[arg-type]
-                start_time=datetime.time(9, 0),
-            )
+            PublicBookingCreate(**self._base(date="not-a-date"))  # type: ignore[arg-type]
+
+    def test_missing_employee_id_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            d = self._base()
+            del d["employee_id"]
+            PublicBookingCreate(**d)  # type: ignore[arg-type]
+
+    def test_missing_branch_id_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            d = self._base()
+            del d["branch_id"]
+            PublicBookingCreate(**d)  # type: ignore[arg-type]
+
+    def test_empty_service_ids_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            PublicBookingCreate(**self._base(service_ids=[]))
+
+    def test_zero_duration_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            PublicBookingCreate(**self._base(duration_minutes=0))
+
+    def test_negative_duration_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            PublicBookingCreate(**self._base(duration_minutes=-1))
+
+    def test_negative_total_raises(self) -> None:
+        with pytest.raises(ValidationError):
+            PublicBookingCreate(**self._base(total=-1))
 
 
 class TestPublicBookedWindow:

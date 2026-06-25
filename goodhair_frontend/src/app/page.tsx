@@ -153,11 +153,8 @@ export default function HomePage() {
       .finally(() => setAuthChecked(true));
   }, []);
 
-  const formatPrice = (price: number) => {
-    if (price >= 1000000) return (price / 1000000).toFixed(price % 1000000 === 0 ? 0 : 1) + 'M';
-    if (price >= 1000) return (price / 1000).toFixed(price % 1000 === 0 ? 0 : 0) + 'K';
-    return String(price);
-  };
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('vi-VN').format(price) + ' VND';
 
   const t = useCallback(
     (vi: string, en: string) => {

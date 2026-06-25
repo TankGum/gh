@@ -230,7 +230,7 @@ export default function ServiceClient() {
       width: '130px',
       sortable: true,
       sortField: 'price',
-      render: svc => <span style={{ fontSize: 13, fontWeight: 700, color: '#EE8A33' }}>{priceFormatter.format(svc.price)}đ</span>,
+      render: svc => <span style={{ fontSize: 13, fontWeight: 700, color: '#EE8A33' }}>{priceFormatter.format(svc.price)} VND</span>,
     },
     {
       key: 'branches',

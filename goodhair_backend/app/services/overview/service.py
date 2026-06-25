@@ -72,7 +72,7 @@ class OverviewService:
         kpis = [
             KpiCard(
                 label="Doanh thu",
-                value=self._fmt_compact(week_revenue) + "đ",
+                value=self._fmt_compact(week_revenue),
                 delta=self._fmt_delta(delta_rev),
                 delta_positive=delta_rev >= 0,
                 sub="7 ngày qua",
@@ -113,7 +113,7 @@ class OverviewService:
             pct = round(rev / max_rev * 100, 1) if max_rev else 0
             revenue_7_days.append(OverviewRevenueItem(
                 date=cur.strftime("%d/%m"),
-                amount=self._fmt_compact(rev) + "đ",
+                amount=self._fmt_compact(rev),
                 pct=pct,
             ))
             cur += datetime.timedelta(days=1)
@@ -257,12 +257,8 @@ class OverviewService:
         return items
 
     @staticmethod
-    def _fmt_compact(value: int) -> str:
-        if value >= 1_000_000:
-            return f"{value / 1_000_000:.1f}M"
-        if value >= 1_000:
-            return f"{value / 1_000:.0f}K"
-        return str(value)
+    def _fmt_compact(value) -> str:
+        return f"{int(value):,}".replace(",", ".") + " VND"
 
     @staticmethod
     def _fmt_delta(delta: int) -> str:

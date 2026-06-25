@@ -122,7 +122,7 @@ export default function EmployeesClient() {
   };
 
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+    new Intl.NumberFormat('vi-VN').format(value) + ' VND';
 
   const visible = employees.filter(e => {
     const q = search.toLowerCase();
