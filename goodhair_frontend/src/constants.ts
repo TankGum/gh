@@ -1,0 +1,6 @@
+export const FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61561075626318";
+export const MESSENGER_URL = "https://m.me/61561075626318";
+export const CONTACT_EMAIL = "dangphucbibau@gmail.com";
+export const CONTACT_PHONE = "034 989 4039";
+export const FOUNDING_YEAR = 2024;
+export const HAPPY_CLIENTS = 10000;

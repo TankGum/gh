@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import BranchStatus, CONTACT_PHONE, EmploymentStatus, FOUNDING_YEAR, HAPPY_CLIENTS, ServiceStatus
+from app.core.constants import BranchStatus, EmploymentStatus, ServiceStatus
 from app.core.exceptions import ConflictError
 from app.db.repositories.booking import BookingRepository
 from app.db.repositories.booking_service_item import BookingServiceItemRepository
@@ -196,15 +196,8 @@ async def get_public_stats(
         )
     ) or 0
 
-    customers = HAPPY_CLIENTS
-
-    years_in_business = max(1, datetime.date.today().year - FOUNDING_YEAR)
-
     return PublicStatsResponse(
         branches=branches,
         services=services,
         barbers=barbers,
-        customers=customers,
-        years_in_business=years_in_business,
-        contact_phone=CONTACT_PHONE,
     )

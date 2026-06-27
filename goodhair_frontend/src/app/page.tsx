@@ -8,17 +8,16 @@ import {
   fetchPublicServices,
   fetchPublicBranches,
   fetchPublicEmployees,
-  fetchPublicTopCustomers,
   fetchPublicStats,
-  type PublicService,
   type PublicBranch,
   type PublicEmployee,
-  type PublicCustomer,
+  type PublicService,
   type PublicStats,
 } from '@/services/public.api';
 import { getMe } from '@/services/auth.api';
 import type { Me } from '@/types/account.type';
 import BranchMap from '@/components/ui/BranchMap';
+import { FACEBOOK_URL, MESSENGER_URL, CONTACT_EMAIL, CONTACT_PHONE, FOUNDING_YEAR, HAPPY_CLIENTS } from '@/constants';
 
 
 const playfairDisplay = Playfair_Display({
@@ -46,7 +45,6 @@ export default function HomePage() {
   const [branchesLoading, setBranchesLoading] = useState(true);
   const [employeesList, setEmployeesList] = useState<PublicEmployee[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(true);
-  const [topCustomers, setTopCustomers] = useState<PublicCustomer[]>([]);
   const [stats, setStats] = useState<PublicStats | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -129,13 +127,6 @@ export default function HomePage() {
       .then(res => setEmployeesList(res.items))
       .catch(() => {})
       .finally(() => setEmployeesLoading(false));
-  }, []);
-
-  // Fetch top customers
-  useEffect(() => {
-    fetchPublicTopCustomers(3)
-      .then(setTopCustomers)
-      .catch(() => {});
   }, []);
 
   // Fetch public stats
@@ -379,10 +370,10 @@ export default function HomePage() {
             <div id="gh-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginTop: 64, borderTop: '1px solid rgba(238,138,51,.18)', paddingTop: 30 }}>
               {stats
                 ? [
-                    { value: `${stats.yearsInBusiness}+`, label: t('Năm kinh nghiệm', 'Years of craft') },
+                    { value: `${Math.max(1, new Date().getFullYear() - FOUNDING_YEAR)}+`, label: t('Năm kinh nghiệm', 'Years of craft') },
                     { value: String(stats.branches), label: t('Chi nhánh', 'Locations') },
                     { value: `${stats.barbers}+`, label: t('Barber', 'Master barbers') },
-                    { value: `${stats.customers >= 1000 ? Math.round(stats.customers / 1000) + 'K' : stats.customers}+`, label: t('Khách hàng', 'Happy clients') },
+                    { value: `${HAPPY_CLIENTS >= 1000 ? Math.round(HAPPY_CLIENTS / 1000) + 'K' : HAPPY_CLIENTS}+`, label: t('Khách hàng', 'Happy clients') },
                   ].map(stat => (
                     <div key={stat.label}>
                       <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, fontWeight: 700, color: '#F1ECE1' }}>{stat.value}</div>
@@ -698,9 +689,20 @@ export default function HomePage() {
                             : ''}
                         </p>
                       </div>
-                      <Link href={`/bookings?branchId=${branch.id}&step=2`} style={{ textDecoration: 'none', border: '1px solid rgba(238,138,51,.4)', color: '#F1ECE1', padding: '10px 18px', borderRadius: 2, fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        {t('Đặt', 'Book')}
-                      </Link>
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <Link href={`/bookings?branchId=${branch.id}&step=2`} style={{ textDecoration: 'none', background: '#EE8A33', color: '#0B1620', padding: '10px 22px', borderRadius: 4, fontSize: 12, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', whiteSpace: 'nowrap', transition: 'all .2s', boxShadow: '0 2px 12px rgba(238,138,51,.25)' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#f59e42'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(238,138,51,.4)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#EE8A33'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(238,138,51,.25)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                        >
+                          {t('Đặt lịch', 'Book')}
+                        </Link>
+                        <a href={`https://www.google.com/maps/search/${encodeURIComponent(`GOODHAIR ${branch.name} ${branch.address || ''}`)}/@${branch.latitude},${branch.longitude},17z`} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.6)', padding: '10px 14px', borderRadius: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, transition: 'all .2s' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(238,138,51,.12)'; e.currentTarget.style.borderColor = '#EE8A33'; e.currentTarget.style.color = '#EE8A33'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(238,138,51,.3)'; e.currentTarget.style.color = 'rgba(241,236,225,.6)'; }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24z"/></svg>
+                        </a>
+                      </div>
                     </div>
                     );
                   })}
@@ -709,122 +711,66 @@ export default function HomePage() {
         </div>
       </section></AnimatedSection>
 
-      {/* TOP CUSTOMERS — podium */}
-      <AnimatedSection delay={0.5}><section style={{ background: '#F1ECE1', color: '#15110C', padding: 'clamp(72px,9vw,120px) 28px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+      {/* TESTIMONIALS + GALLERY */}
+      <AnimatedSection delay={0.5}><section style={{ background: '#F1ECE1', color: '#15110C', padding: 'clamp(72px,9vw,120px) 28px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(70% 60% at 50% 30%,rgba(212,168,67,.06) 0%,transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 960, margin: '0 auto', position: 'relative' }}>
+
+          {/* ─── TESTIMONIALS ─── */}
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 20 }}>
               <span style={{ width: 30, height: 1, background: '#C26A1A' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.26em', textTransform: 'uppercase', color: '#C26A1A' }}>{t('Khách hàng thân thiết', 'Top Clients')}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.26em', textTransform: 'uppercase', color: '#C26A1A' }}>{t('Khách hàng nói gì', 'Testimonials')}</span>
               <span style={{ width: 30, height: 1, background: '#C26A1A' }} />
             </div>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(32px,4.6vw,56px)', lineHeight: 1.05 }}>{t('Khách quen của chúng tôi.', 'Our most loyal clients.')}</h2>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 'clamp(28px,4.2vw,48px)', lineHeight: 1.05 }}>
+              {t('Khách hàng của chúng tôi.', 'What our customers say.')}
+            </h2>
           </div>
 
-          {topCustomers.length === 3 && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 20 }}>
-              {/* #2 — silver */}
-              <div style={{ flex: 1, maxWidth: 260, textAlign: 'center' }}>
-                <div style={{
-                  width: 80, height: 80, margin: '0 auto 14px', borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#E5E7EB,#D1D5DB)',
-                  border: '3px solid #9CA3AF',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#4B5563',
-                  boxShadow: '0 4px 20px rgba(156,163,175,.25)',
-                }}>
-                  {topCustomers[1].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#9CA3AF', textTransform: 'uppercase' }}>TOP 2</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, marginTop: 6, color: '#15110C' }}>{topCustomers[1].name}</div>
-                <div style={{ fontSize: 13, color: 'rgba(21,17,12,.5)', marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  {t(`${topCustomers[1].totalVisits} lần`, `${topCustomers[1].totalVisits} visits`)}
-                </div>
-              </div>
-
-              {/* #1 — gold (tallest) */}
-              <div style={{ flex: 1.15, maxWidth: 300, textAlign: 'center', position: 'relative' }}>
-                <div style={{
-                  width: 24, height: 24, margin: '0 auto -4px', zIndex: 2, position: 'relative',
-                }}>
-                  <svg viewBox="0 0 24 24" fill="#D4A843">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </div>
-                <div style={{
-                  width: 100, height: 100, margin: '0 auto 14px', borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#FFF3CC,#FFE082)',
-                  border: '3px solid #D4A843',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 800, color: '#8B6914',
-                  boxShadow: '0 8px 32px rgba(212,168,67,.3)',
-                }}>
-                  {topCustomers[0].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#D4A843', textTransform: 'uppercase' }}>TOP 1</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 800, marginTop: 6, color: '#15110C' }}>{topCustomers[0].name}</div>
-                <div style={{ fontSize: 14, color: 'rgba(21,17,12,.5)', marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4A843" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  {t(`${topCustomers[0].totalVisits} lần`, `${topCustomers[0].totalVisits} visits`)}
-                </div>
-              </div>
-
-              {/* #3 — bronze */}
-              <div style={{ flex: 1, maxWidth: 260, textAlign: 'center' }}>
-                <div style={{
-                  width: 80, height: 80, margin: '0 auto 14px', borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#FFE8D6,#FFD4B8)',
-                  border: '3px solid #CD7F4B',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: '#8B5E3C',
-                  boxShadow: '0 4px 20px rgba(205,127,75,.25)',
-                }}>
-                  {topCustomers[2].name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#CD7F4B', textTransform: 'uppercase' }}>TOP 3</div>
-                <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700, marginTop: 6, color: '#15110C' }}>{topCustomers[2].name}</div>
-                <div style={{ fontSize: 13, color: 'rgba(21,17,12,.5)', marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#CD7F4B" strokeWidth="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                  {t(`${topCustomers[2].totalVisits} lần`, `${topCustomers[2].totalVisits} visits`)}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {topCustomers.length > 0 && topCustomers.length !== 3 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
-              {topCustomers.map((c, i) => (
-                <div key={c.id} style={{ textAlign: 'center', minWidth: 160, padding: '24px 20px', background: '#fff', border: '1px solid rgba(21,17,12,.08)', borderRadius: 3 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))', gap: 20, marginBottom: 72 }}>
+            {[
+              { name: 'Minh Anh', tag: t('Khách hàng thân thiết', 'Regular'), stars: 5, text: t('Tóc mình làm ở đây rất ưng ý, thợ lành nghề và thái độ phục vụ tốt. Không gian sạch sẽ, thoải mái.', 'Love my hair here — skilled stylists and great service. Clean and comfortable space.') },
+              { name: 'Hoàng Nam', tag: t('Khách hàng thường xuyên', 'Frequent'), stars: 5, text: t('Không gian thoải mái, nhân viên nhiệt tình. Đã đi nhiều tiệm nhưng đây là chỗ ưng ý nhất.', 'Relaxing atmosphere, friendly staff. Been to many but this is my favorite.') },
+              { name: 'Thu Hà', tag: t('Khách hàng mới', 'New client'), stars: 4, text: t('Đặt lịch online dễ dàng, đúng giờ, không phải chờ lâu. Lần đầu đến nhưng rất hài lòng!', 'Easy online booking, on time, no waiting. First visit and very satisfied!') },
+              { name: 'Quốc Anh', tag: t('Khách hàng VIP', 'VIP'), stars: 5, text: t('Là khách quen từ hồi mới mở, chất lượng lúc nào cũng ổn định. Đội ngũ stylist chuyên nghiệp.', 'Been a regular since day one — consistent quality. Professional stylist team.') },
+            ].map((r, i) => (
+              <div key={i} style={{
+                background: i === 0 || i === 3 ? '#fff' : 'rgba(255,255,255,.6)',
+                borderRadius: 16, padding: '28px 24px',
+                border: i === 0 || i === 3 ? '1px solid rgba(212,168,67,.15)' : '1px solid rgba(21,17,12,.06)',
+                boxShadow: i === 0 || i === 3 ? '0 4px 20px rgba(212,168,67,.08)' : 'none',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
                   <div style={{
-                    width: 64, height: 64, margin: '0 auto 12px', borderRadius: '50%',
-                    background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: "'Playfair Display', serif", color: '#EE8A33', fontWeight: 700, fontSize: 20,
+                    width: 44, height: 44, borderRadius: '50%',
+                    background: `linear-gradient(135deg,#D4A843,#D4A843dd)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontWeight: 700, fontSize: 16,
+                    fontFamily: "'Playfair Display', serif", flexShrink: 0,
                   }}>
-                    {c.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase()}
+                    {r.name.split(' ').map(s => s[0]).join('')}
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: '#15110C' }}>{c.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(21,17,12,.5)', marginTop: 4 }}>{t(`${c.totalVisits} lần ghé`, `${c.totalVisits} visits`)}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#15110C' }}>{r.name}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(21,17,12,.4)', marginTop: 1 }}>{r.tag}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 2 }}>
+                    {Array.from({ length: 5 }).map((_, si) => (
+                      <svg key={si} width="13" height="13" viewBox="0 0 24 24" fill={si < r.stars ? '#D4A843' : 'rgba(21,17,12,.1)'}>
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {topCustomers.length === 0 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 20 }}>
-              {[1, 2, 3].map(i => (
-                <div key={i} style={{ textAlign: 'center', minWidth: 160 }}>
-                  <div style={{ width: 80, height: 80, margin: '0 auto 14px', borderRadius: '50%', background: 'rgba(21,17,12,.06)' }} />
-                  <div style={{ width: 100, height: 16, margin: '0 auto', background: 'rgba(21,17,12,.06)', borderRadius: 3 }} />
-                  <div style={{ width: 70, height: 12, margin: '8px auto 0', background: 'rgba(21,17,12,.04)', borderRadius: 3 }} />
-                </div>
-              ))}
-            </div>
-          )}
+                <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'rgba(21,17,12,.65)', margin: 0, fontStyle: 'italic' }}>
+                  "{r.text}"
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section></AnimatedSection>
-
-
 
       {/* BOOKING CTA */}
       <AnimatedSection delay={0.7}><section style={{ background: 'linear-gradient(150deg,#0F2233 0%,#0A131D 100%)', borderTop: '1px solid rgba(238,138,51,.2)', borderBottom: '1px solid rgba(238,138,51,.2)', padding: 'clamp(72px,10vw,130px) 28px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
@@ -873,7 +819,7 @@ export default function HomePage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <span style={{ fontSize: 13, color: 'rgba(241,236,225,.45)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(238,138,51,.4)" strokeWidth="1.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-                  {stats?.contactPhone ?? '034 989 4039'}
+                  {CONTACT_PHONE}
                 </span>
               </div>
             </div>
@@ -881,24 +827,28 @@ export default function HomePage() {
             <div>
               <h4 style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(238,138,51,.6)', margin: '0 0 16px' }}>{t('Kết nối', 'Connect')}</h4>
               <div style={{ display: 'flex', gap: 10 }}>
-                {['f', 'ig', 'tik'].map(s => (
-                  <a key={s} href="#" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(238,138,51,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(241,236,225,.5)', fontSize: 11, fontWeight: 700, textDecoration: 'none', transition: 'all .2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(238,138,51,.15)'; e.currentTarget.style.borderColor = '#EE8A33'; e.currentTarget.style.color = '#EE8A33'; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(238,138,51,.2)'; e.currentTarget.style.color = 'rgba(241,236,225,.5)'; }}
-                  >{s}</a>
-                ))}
+                <a href={FACEBOOK_URL} target="_blank" rel="noopener noreferrer" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(238,138,51,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(241,236,225,.5)', textDecoration: 'none', transition: 'all .2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(238,138,51,.15)'; e.currentTarget.style.borderColor = '#EE8A33'; e.currentTarget.style.color = '#EE8A33'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(238,138,51,.2)'; e.currentTarget.style.color = 'rgba(241,236,225,.5)'; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </a>
+                <a href={MESSENGER_URL} target="_blank" rel="noopener noreferrer" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(238,138,51,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(241,236,225,.5)', textDecoration: 'none', transition: 'all .2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(238,138,51,.15)'; e.currentTarget.style.borderColor = '#EE8A33'; e.currentTarget.style.color = '#EE8A33'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(238,138,51,.2)'; e.currentTarget.style.color = 'rgba(241,236,225,.5)'; }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.193 14.963l-3.056-3.259-5.963 3.259L10.732 8.2l3.131 3.259L19.752 8.2l-6.559 6.763z"/></svg>
+                </a>
               </div>
-              <div style={{ fontSize: 12, color: 'rgba(241,236,225,.25)', marginTop: 14, fontWeight: 300 }}>
-                {t('8:00 – 21:00 · T2–CN', '8:00 – 21:00 · Mon–Sun')}
+              <div style={{ fontSize: 12, color: 'rgba(241,236,225,.35)', marginTop: 14, fontWeight: 300, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(238,138,51,.4)" strokeWidth="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                {CONTACT_EMAIL}
               </div>
             </div>
           </div>
           <div style={{ marginTop: 40, paddingTop: 18, borderTop: '1px solid rgba(238,138,51,.06)', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 11.5, color: 'rgba(241,236,225,.25)' }}>&copy; 2026 GOODHAIR Barbershop</span>
-            <div style={{ display: 'flex', gap: 24 }}>
-              <a href="#" style={{ textDecoration: 'none', color: 'rgba(241,236,225,.25)', fontSize: 11.5, letterSpacing: '.03em' }}>{t('Bảo mật', 'Privacy')}</a>
-              <a href="#" style={{ textDecoration: 'none', color: 'rgba(241,236,225,.25)', fontSize: 11.5, letterSpacing: '.03em' }}>{t('Điều khoản', 'Terms')}</a>
-            </div>
+
           </div>
         </div>
       </footer>
@@ -912,6 +862,8 @@ export default function HomePage() {
           #gh-hero-media { display: none !important; }
           #gh-stats { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
           #gh-branch-grid { grid-template-columns: 1fr !important; }
+          #gh-branch-grid > div > div { flex-wrap: wrap !important; }
+          #gh-branch-grid > div > div > div:last-child { width: 100% !important; justify-content: flex-end !important; padding-top: 4px !important; }
           #gh-branch-map { position: relative !important; top: 0 !important; min-height: 260px !important; }
         }
         @media (max-width: 560px) {
