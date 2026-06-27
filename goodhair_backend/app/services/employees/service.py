@@ -91,6 +91,14 @@ class EmployeeService:
         self, employee: Employee, payload: dict
     ) -> list[dict[str, str]]:
         changes: list[dict[str, str]] = []
+        if "display_name" in payload and payload["display_name"] != employee.display_name:
+            changes.append(
+                {
+                    "label": "Tên hiển thị",
+                    "from": employee.display_name or employee.name,
+                    "to": payload["display_name"] or "",
+                }
+            )
         if "status" in payload and payload["status"] != employee.status:
             changes.append(
                 {

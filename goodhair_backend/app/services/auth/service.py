@@ -58,6 +58,7 @@ class AuthService:
                         {
                             "account_id": account.id,
                             "name": account.name,
+                            "display_name": account.name,
                             "email": account.email,
                             "avatar_url": account.avatar_url,
                             "role_id": admin_role.id if admin_role else None,

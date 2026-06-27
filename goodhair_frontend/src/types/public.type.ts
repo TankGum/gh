@@ -31,6 +31,7 @@ export interface PublicService {
 export interface PublicEmployee {
   id: string;
   name: string;
+  displayName: string | null;
   avatarUrl: string | null;
   branchId: string | null;
   roleName: string | null;

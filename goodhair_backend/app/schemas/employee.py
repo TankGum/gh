@@ -8,6 +8,7 @@ class EmployeeRead(AppSchema):
     id: UUID
     account_id: UUID
     name: str
+    display_name: str | None = None
     email: str
     avatar_url: str | None
     branch_id: UUID | None
@@ -24,6 +25,7 @@ class EmployeeListParams(PageParams):
 
 
 class EmployeeUpdate(AppSchema):
+    display_name: str | None = None
     branch_id: UUID | None = None
     role_id: UUID | None = None
     status: EmploymentStatus | None = None
