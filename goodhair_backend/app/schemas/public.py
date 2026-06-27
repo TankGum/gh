@@ -62,9 +62,6 @@ class PublicStatsResponse(AppSchema):
     branches: int
     services: int
     barbers: int
-    customers: int
-    years_in_business: int
-    contact_phone: str
 
 
 class PublicBookingRead(AppSchema):

@@ -47,7 +47,4 @@ export interface PublicStats {
   branches: number;
   services: number;
   barbers: number;
-  customers: number;
-  yearsInBusiness: number;
-  contactPhone: string;
 }

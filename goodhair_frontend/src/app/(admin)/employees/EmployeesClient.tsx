@@ -259,10 +259,11 @@ export default function EmployeesClient() {
 
       {/* Edit modal */}
       <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Chỉnh sửa nhân viên">
+        <style>{`@media (max-width: 560px) { .gh-emp-upload-btn { width: 100% !important; justify-content: center; } }`}</style>
         {editTarget && (
           <div style={{ padding: '8px 0' }}>
             {/* Avatar upload */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, padding: 16, background: 'rgba(238,138,51,0.06)', borderRadius: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, padding: 16, background: 'rgba(238,138,51,0.06)', borderRadius: 10, flexWrap: 'wrap', rowGap: 12 }}>
               <div style={{ position: 'relative' }}>
                 {editTarget.avatarUrl ? (
                   <img src={editTarget.avatarUrl} alt={editTarget.name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }} />
@@ -272,12 +273,13 @@ export default function EmployeesClient() {
                   </span>
                 )}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#F1ECE1' }}>{editTarget.name}</div>
-                <div style={{ fontSize: 12, color: 'rgba(241,236,225,0.55)' }}>{editTarget.email}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#F1ECE1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{editTarget.name}</div>
+                <div style={{ fontSize: 12, color: 'rgba(241,236,225,0.55)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{editTarget.email}</div>
               </div>
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} />
               <button
+                className="gh-emp-upload-btn"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
                 style={{ background: 'transparent', border: '1px solid rgba(238,138,51,0.4)', color: '#EE8A33', padding: '8px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, fontFamily: "'Hanken Grotesk',sans-serif" }}
