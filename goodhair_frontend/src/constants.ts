@@ -4,3 +4,6 @@ export const CONTACT_EMAIL = "dangphucbibau@gmail.com";
 export const CONTACT_PHONE = "034 989 4039";
 export const FOUNDING_YEAR = 2024;
 export const HAPPY_CLIENTS = 10000;
+export const HERO_RATING = "5.0";
+export const HERO_RATING_MAX = "5.0";
+export const HERO_REVIEW_COUNT = "3,000+";

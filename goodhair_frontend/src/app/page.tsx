@@ -17,7 +17,7 @@ import {
 import { getMe } from '@/services/auth.api';
 import type { Me } from '@/types/account.type';
 import BranchMap from '@/components/ui/BranchMap';
-import { FACEBOOK_URL, MESSENGER_URL, CONTACT_EMAIL, CONTACT_PHONE, FOUNDING_YEAR, HAPPY_CLIENTS } from '@/constants';
+import { FACEBOOK_URL, MESSENGER_URL, CONTACT_EMAIL, CONTACT_PHONE, FOUNDING_YEAR, HAPPY_CLIENTS, HERO_RATING, HERO_RATING_MAX, HERO_REVIEW_COUNT } from '@/constants';
 
 
 const playfairDisplay = Playfair_Display({
@@ -390,7 +390,7 @@ export default function HomePage() {
           </div>
           <div id="gh-hero-media" style={{ position: 'relative' }}>
             <div className="gh-hero-imgbox" style={{ position: 'relative', aspectRatio: '3/4', border: '1px solid rgba(238,138,51,.3)', background: '#1C1C1C', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <img className="gh-hero-img-inner" src="/logo/logo.jpg" alt="GOODHAIR — Haircuts & Shaves" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+              <img className="gh-hero-img-inner" src="/hero_image/hero.jpg" alt="GOODHAIR — Haircuts & Shaves" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
               <span style={{ position: 'absolute', top: 0, right: 0, width: 22, height: 22, borderTop: '1px solid #EE8A33', borderRight: '1px solid #EE8A33', margin: 14 }} />
               <span style={{ position: 'absolute', bottom: 0, left: 0, width: 22, height: 22, borderBottom: '1px solid #EE8A33', borderLeft: '1px solid #EE8A33', margin: 14 }} />
             </div>
@@ -398,8 +398,8 @@ export default function HomePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ color: '#EE8A33', fontSize: 18, letterSpacing: 2 }}>★★★★★</span>
               </div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 22, marginTop: 4 }}>4.9<span style={{ fontSize: 13, color: 'rgba(21,17,12,.5)', fontFamily: "'Hanken Grotesk', sans-serif", fontWeight: 500 }}> / 5.0</span></div>
-              <div style={{ fontSize: 11, letterSpacing: '.04em', color: 'rgba(21,17,12,.55)' }}>{t('12.000+ đánh giá', '12,000+ reviews')}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 22, marginTop: 4 }}>{HERO_RATING}<span style={{ fontSize: 13, color: 'rgba(21,17,12,.5)', fontFamily: "'Hanken Grotesk', sans-serif", fontWeight: 500 }}> / {HERO_RATING_MAX}</span></div>
+              <div style={{ fontSize: 11, letterSpacing: '.04em', color: 'rgba(21,17,12,.55)' }}>{t(`${HERO_REVIEW_COUNT} đánh giá`, `${HERO_REVIEW_COUNT} reviews`)}</div>
             </div>
           </div>
         </div>
