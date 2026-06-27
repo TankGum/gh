@@ -4,6 +4,7 @@ export interface Employee {
   id: string;
   accountId: string;
   name: string;
+  displayName: string | null;
   email: string;
   avatarUrl: string | null;
   branchId: string | null;
@@ -14,6 +15,7 @@ export interface Employee {
 }
 
 export interface EmployeeUpdatePayload {
+  displayName?: string | null;
   branchId?: string | null;
   roleId?: string | null;
   status?: EmploymentStatus;

@@ -90,6 +90,7 @@ export default function EmployeesClient() {
     setSubmitting(true);
     try {
       await updateEmployee(editTarget.id, {
+        displayName: editTarget.displayName,
         branchId: editTarget.branchId,
         roleId: editTarget.roleId,
         status: editTarget.status,
@@ -287,6 +288,17 @@ export default function EmployeesClient() {
                 <Upload size={14} />
                 {uploading ? 'Đang tải...' : 'Đổi ảnh'}
               </button>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Tên hiển thị</label>
+              <input
+                value={editTarget.displayName ?? ''}
+                onChange={e => setEditTarget({ ...editTarget, displayName: e.target.value || null })}
+                placeholder="Nhập tên hiển thị (bỏ trống để dùng tên mặc định)"
+                style={{ width: '100%', background: 'rgba(241,236,225,0.06)', border: '1px solid rgba(241,236,225,0.12)', borderRadius: 6, padding: '10px 12px', color: '#F1ECE1', fontSize: 13, fontFamily: "'Hanken Grotesk',sans-serif", outline: 'none' }}
+              />
+              <div style={{ fontSize: 11, color: 'rgba(241,236,225,0.4)', marginTop: 4 }}>Tên hiển thị với khách hàng (VD: "Master Đăng" thay vì "{editTarget.name}")</div>
             </div>
 
             {/* Readonly stats */}

@@ -41,6 +41,7 @@ class PublicServiceRead(AppSchema):
 class PublicEmployeeRead(AppSchema):
     id: UUID
     name: str
+    display_name: str | None = None
     avatar_url: str | None = None
     branch_id: UUID | None = None
     role_name: str | None = None

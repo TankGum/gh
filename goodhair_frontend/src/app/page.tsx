@@ -614,7 +614,7 @@ export default function HomePage() {
                         )}
                       </div>
                       <div style={{ padding: 20 }}>
-                        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700 }}>{emp.name}</h3>
+                        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, fontWeight: 700 }}>{emp.displayName || emp.name}</h3>
                         {emp.roleName && (
                           <p style={{ fontSize: 13, color: 'rgba(21,17,12,.55)', marginTop: 4, fontWeight: 300 }}>{emp.roleName}</p>
                         )}

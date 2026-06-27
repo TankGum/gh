@@ -19,6 +19,7 @@ class Employee(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, Base):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(256), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(256), nullable=True)
     email: Mapped[str] = mapped_column(String(256), nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     branch_id: Mapped[UUID | None] = mapped_column(

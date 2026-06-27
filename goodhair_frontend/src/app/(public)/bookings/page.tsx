@@ -137,7 +137,7 @@ export default function HomePage() {
   const total = selServices.reduce((a, s) => a + s.price, 0);
   const durMin = selServices.reduce((a, s) => a + s.durationMinutes, 0);
   const selBarber = employees.find(b => b.id === barberId);
-  const barberName = selBarber?.name || '—';
+  const barberName = selBarber?.displayName || selBarber?.name || '—';
 
   const durLabel = durMin
     ? (durMin >= 60
@@ -414,7 +414,7 @@ export default function HomePage() {
                           </span>
                         )}
                         <div style={{ flex: 1, overflow: 'hidden' }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: styles.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spinDisplay?.name || '...'}</div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: styles.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spinDisplay?.displayName || spinDisplay?.name || '...'}</div>
                           <div style={{ fontSize: 12, color: styles.accent, marginTop: 2 }}>{t('Đang chọn ngẫu nhiên...', 'Picking randomly...')}</div>
                         </div>
                       </div>
@@ -440,7 +440,7 @@ export default function HomePage() {
                         <span style={{ width: 52, height: 52, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: playfair.style.fontFamily, fontWeight: 700, fontSize: 18, ...(sel ? { background: styles.accent, color: '#0B1620' } : { background: '#16110C', color: styles.accent }) }}>{initials}</span>
                       )}
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: styles.text, margin: 0 }}>{bb.name}</h3>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: styles.text, margin: 0 }}>{bb.displayName || bb.name}</h3>
                         {bb.roleName && <p style={{ fontSize: 12, color: 'rgba(241,236,225,.5)', marginTop: 2 }}>{bb.roleName}</p>}
                       </div>
                     </button>

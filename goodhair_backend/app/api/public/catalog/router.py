@@ -101,6 +101,7 @@ async def list_public_employees(
         PublicEmployeeRead(
             id=e.id,
             name=e.name,
+            display_name=e.display_name,
             avatar_url=e.avatar_url,
             branch_id=e.branch_id,
             role_name=role_name_map.get(e.role_id) if e.role_id else None,
