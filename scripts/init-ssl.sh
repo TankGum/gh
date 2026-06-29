@@ -14,7 +14,8 @@ echo ">>> [2/4] Đợi nginx khởi động..."
 sleep 5
 
 echo ">>> [3/4] Yêu cầu SSL cert từ Let's Encrypt..."
-$COMPOSE run --rm certbot certonly \
+$COMPOSE run --rm --entrypoint "" certbot \
+  certbot certonly \
   --webroot --webroot-path=/var/www/certbot \
   --email "$EMAIL" --agree-tos --no-eff-email \
   -d "$DOMAIN" -d "www.$DOMAIN" -d "api.$DOMAIN"
