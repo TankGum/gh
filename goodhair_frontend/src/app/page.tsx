@@ -53,6 +53,7 @@ export default function HomePage() {
   const [nearestDistance, setNearestDistance] = useState<number | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const currentYear = new Date().getFullYear();
 
   // Scroll listener for sticky header
   useEffect(() => {
@@ -847,7 +848,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ marginTop: 40, paddingTop: 18, borderTop: '1px solid rgba(238,138,51,.06)', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 11.5, color: 'rgba(241,236,225,.25)' }}>&copy; 2026 GOODHAIR Barbershop</span>
+            <span style={{ fontSize: 11.5, color: 'rgba(241,236,225,.25)' }}>&copy; {currentYear} GOODHAIR</span>
 
           </div>
         </div>
