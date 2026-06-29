@@ -1,23 +1,25 @@
 'use client';
 
 import { X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 export default function Modal({
   open,
   onClose,
   title,
   children,
+  style,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
+  style?: CSSProperties;
 }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-[#0d1424] border border-slate-700 rounded-lg w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#0d1424] border border-slate-700 rounded-lg w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" style={style}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
           <h2 className="text-lg font-bold text-white">{title}</h2>
           <button
