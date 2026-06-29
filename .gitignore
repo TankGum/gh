@@ -1,0 +1,4 @@
+.env.prod
+.env.production
+*.env.production
+nginx/nginx.conf.bak
