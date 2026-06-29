@@ -18,7 +18,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./
-RUN poetry install --with dev --no-root
+RUN poetry install --without dev --no-root
 
 COPY . .
 

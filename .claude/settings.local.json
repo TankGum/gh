@@ -3,7 +3,8 @@
     "allow": [
       "Bash(curl -s -m 5 -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8002/)",
       "Bash(curl -s -m 5 -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:8002/docs)",
-      "Bash(~/.cache/pypoetry/virtualenvs/goodhair-backend-0HXkoCQ_-py3.12/bin/pip show *)"
+      "Bash(~/.cache/pypoetry/virtualenvs/goodhair-backend-0HXkoCQ_-py3.12/bin/pip show *)",
+      "Bash(openssl rand *)"
     ]
   }
 }
