@@ -847,7 +847,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ marginTop: 40, paddingTop: 18, borderTop: '1px solid rgba(238,138,51,.06)', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 11.5, color: 'rgba(241,236,225,.25)' }}>&copy; 2026 GOODHAIR</span>
+            <span style={{ fontSize: 11.5, color: 'rgba(241,236,225,.25)' }}>&copy; 2026 GOODHAIR Barbershop</span>
 
           </div>
         </div>
