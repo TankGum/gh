@@ -17,6 +17,14 @@ from app.services.activity_logs.labels import BOOKING_LABELS
 from app.services.activity_logs.service import ActivityLogService
 
 
+STATUS_LABEL: dict[str, str] = {
+    "pending": "Chờ xác nhận",
+    "confirmed": "Đã xác nhận",
+    "completed": "Hoàn tất",
+    "cancelled": "Đã huỷ",
+}
+
+
 class BookingService:
     def __init__(self, session: AsyncSession) -> None:
         self.repo = BookingRepository(session)
@@ -123,7 +131,9 @@ class BookingService:
                 entity_type="booking",
                 entity_id=booking.id,
                 target_label=self._booking_target(booking),
-                changes=compute_changes(before, payload, BOOKING_LABELS),
+                changes=compute_changes(before, payload, BOOKING_LABELS, formatters={
+                    "status": lambda v: STATUS_LABEL.get(str(v), str(v)),
+                }),
             )
         if data.service_ids is not None:
             await self.svc_item_repo.set_services(booking_id, data.service_ids)

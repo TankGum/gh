@@ -12,6 +12,32 @@ from app.schemas.role import RoleCreate, RoleUpdate
 from app.services.activity_logs.labels import ROLE_LABELS
 from app.services.activity_logs.service import ActivityLogService
 
+PERM_ACTION_LABELS: dict[str, str] = {
+    "view": "Xem",
+    "create": "Thêm",
+    "edit": "Sửa",
+    "delete": "Xoá",
+}
+
+PERM_MODULE_LABELS: dict[str, str] = {
+    "overview": "Tổng quan",
+    "bookings": "Đặt lịch",
+    "revenue": "Doanh thu",
+    "staff": "Nhân viên",
+    "shifts": "Ca làm việc",
+    "customers": "Khách hàng",
+    "branches": "Chi nhánh",
+    "services": "Dịch vụ",
+    "recruit": "Tuyển dụng",
+    "roles": "Quản lý vai trò",
+    "logs": "Nhật ký hoạt động",
+}
+
+
+def _fmt_perms(perms: dict[str, bool]) -> str:
+    enabled = [PERM_ACTION_LABELS[a] for a in ("view", "create", "edit", "delete") if perms.get(a)]
+    return ", ".join(enabled) if enabled else "Trống"
+
 
 class RoleService:
     def __init__(self, session: AsyncSession) -> None:
@@ -42,13 +68,25 @@ class RoleService:
         payload = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
         if not payload:
             return role
+        old_perms = dict(role.permissions) if "permissions" in payload else None
         before = {k: getattr(role, k) for k in payload if k != "permissions"}
         await self.repo.update(role, payload)
         changes = compute_changes(before, payload, ROLE_LABELS)
-        if "permissions" in payload:
-            changes.append(
-                {"label": "Phân quyền", "from": "—", "to": "Đã cập nhật"}
-            )
+        if old_perms is not None:
+            new_perms = payload["permissions"] or {}
+            all_modules = set(list(old_perms.keys()) + list(new_perms.keys()))
+            for mod_key in sorted(all_modules):
+                old_actions = old_perms.get(mod_key, {})
+                new_actions = new_perms.get(mod_key, {})
+                old_fmt = _fmt_perms(old_actions)
+                new_fmt = _fmt_perms(new_actions)
+                if old_fmt != new_fmt:
+                    mod_label = PERM_MODULE_LABELS.get(mod_key, mod_key)
+                    changes.append({
+                        "label": f"Phân quyền · {mod_label}",
+                        "from": old_fmt,
+                        "to": new_fmt,
+                    })
         await self.activity.log(
             ActivityAction.UPDATE,
             PermissionModule.ROLES,

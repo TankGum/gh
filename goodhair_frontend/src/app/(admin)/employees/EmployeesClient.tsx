@@ -296,7 +296,7 @@ export default function EmployeesClient() {
                 value={editTarget.displayName ?? ''}
                 onChange={e => setEditTarget({ ...editTarget, displayName: e.target.value || null })}
                 placeholder="Nhập tên hiển thị (bỏ trống để dùng tên mặc định)"
-                style={{ width: '100%', background: 'rgba(241,236,225,0.06)', border: '1px solid rgba(241,236,225,0.12)', borderRadius: 6, padding: '10px 12px', color: '#F1ECE1', fontSize: 13, fontFamily: "'Hanken Grotesk',sans-serif", outline: 'none' }}
+                style={{ width: '100%', background: 'rgba(241,236,225,0.06)', border: '1px solid rgba(238,138,51,.25)', borderRadius: 6, height: 42, boxSizing: 'border-box', padding: '0 12px', color: '#F1ECE1', fontSize: 13, fontFamily: "'Hanken Grotesk',sans-serif", outline: 'none' }}
               />
               <div style={{ fontSize: 11, color: 'rgba(241,236,225,0.4)', marginTop: 4 }}>Tên hiển thị với khách hàng (VD: "Master Đăng" thay vì "{editTarget.name}")</div>
             </div>
@@ -315,39 +315,51 @@ export default function EmployeesClient() {
 
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Chi nhánh</label>
-              <Select
-                value={editTarget.branchId}
-                onChange={(val) => setEditTarget({ ...editTarget, branchId: val })}
-                style={{ width: '100%' }}
-                placeholder="Chọn chi nhánh"
-                allowClear
-                options={branches.map(b => ({ label: b.name, value: b.id }))}
-              />
+              <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+                <Select
+                  size="large"
+                  variant="borderless"
+                  value={editTarget.branchId}
+                  onChange={(val) => setEditTarget({ ...editTarget, branchId: val })}
+                  style={{ width: '100%' }}
+                  placeholder="Chọn chi nhánh"
+                  allowClear
+                  options={branches.map(b => ({ label: b.name, value: b.id }))}
+                />
+              </div>
             </div>
 
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Vai trò</label>
-              <Select
-                value={editTarget.roleId}
-                onChange={(val) => setEditTarget({ ...editTarget, roleId: val })}
-                style={{ width: '100%' }}
-                placeholder="Chọn vai trò"
-                allowClear
-                options={roles.map(r => ({ label: r.name, value: r.id }))}
-              />
+              <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+                <Select
+                  size="large"
+                  variant="borderless"
+                  value={editTarget.roleId}
+                  onChange={(val) => setEditTarget({ ...editTarget, roleId: val })}
+                  style={{ width: '100%' }}
+                  placeholder="Chọn vai trò"
+                  allowClear
+                  options={roles.map(r => ({ label: r.name, value: r.id }))}
+                />
+              </div>
             </div>
 
             <div style={{ marginBottom: 18 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Trạng thái</label>
-              <Select
-                value={editTarget.status}
-                onChange={(val) => setEditTarget({ ...editTarget, status: val })}
-                style={{ width: '100%' }}
-                options={[
-                  { label: 'Đang làm', value: 'active' },
-                  { label: 'Đã nghỉ', value: 'inactive' },
-                ]}
-              />
+              <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+                <Select
+                  size="large"
+                  variant="borderless"
+                  value={editTarget.status}
+                  onChange={(val) => setEditTarget({ ...editTarget, status: val })}
+                  style={{ width: '100%' }}
+                  options={[
+                    { label: 'Đang làm', value: 'active' },
+                    { label: 'Đã nghỉ', value: 'inactive' },
+                  ]}
+                />
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 28 }}>
