@@ -17,5 +17,6 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /var/www/gh
-            git pull
+            git fetch origin
+            git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
             docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
