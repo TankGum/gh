@@ -501,6 +501,7 @@ export default function ManageBookingsClient() {
                   value={modalData.customerName || ''}
                   disabled={readonly}
                   onChange={e => { setFormErrors(prev => ({ ...prev, customerName: '' })); setModalData({ ...modalData, customerName: e.target.value }); }}
+                  placeholder="Nhập tên khách hàng"
                   style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerName ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', height: 42, boxSizing: 'border-box', padding: '0 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
                 />
                 {formErrors.customerName && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerName}</span>}
@@ -511,6 +512,7 @@ export default function ManageBookingsClient() {
                   value={modalData.customerPhone || ''}
                   disabled={readonly}
                   onChange={e => { setFormErrors(prev => ({ ...prev, customerPhone: '' })); setModalData({ ...modalData, customerPhone: e.target.value }); }}
+                  placeholder="Nhập số điện thoại"
                   style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerPhone ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', height: 42, boxSizing: 'border-box', padding: '0 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
                 />
                 {formErrors.customerPhone && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerPhone}</span>}
@@ -533,7 +535,7 @@ export default function ManageBookingsClient() {
                     const dur = ids.reduce((sum, sid) => sum + (serviceMap.get(sid)?.durationMinutes || 0), 0);
                     setModalData({ ...modalData, serviceIds: ids, total, durationMinutes: dur });
                   }}
-                  style={{ width: '100%' }}
+                  style={{ width: '100%', fontSize: 13 }}
                   placeholder="Chọn dịch vụ"
                   options={serviceOpts}
                 />
@@ -550,7 +552,7 @@ export default function ManageBookingsClient() {
                     value={modalData.branchId || undefined}
                     disabled={readonly}
                     onChange={(val: string | undefined) => { setFormErrors(prev => ({ ...prev, branchId: '' })); setModalData({ ...modalData, branchId: val || null, employeeId: null }); }}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', fontSize: 13 }}
                     variant="borderless"
                     placeholder="Chọn chi nhánh"
                     allowClear
@@ -567,7 +569,7 @@ export default function ManageBookingsClient() {
                     value={modalData.employeeId || undefined}
                     disabled={readonly}
                     onChange={(val: string | undefined) => { setFormErrors(prev => ({ ...prev, employeeId: '' })); setModalData({ ...modalData, employeeId: val || null }); }}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', fontSize: 13 }}
                     variant="borderless"
                     placeholder="Chọn barber"
                     allowClear
@@ -578,7 +580,7 @@ export default function ManageBookingsClient() {
               </div>
             </div>
 
-            {/* Date / Time / Status / Total */}
+            {/* Date / Time / Status */}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 20 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Ngày</label>
@@ -607,7 +609,7 @@ export default function ManageBookingsClient() {
                     value={modalData.startTime || '09:00'}
                     disabled={readonly}
                     onChange={(val: string) => { setFormErrors(prev => ({ ...prev, startTime: '' })); setModalData({ ...modalData, startTime: val }); }}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', fontSize: 13 }}
                     variant="borderless"
                     options={modalSlotOpts}
                   />
@@ -622,20 +624,20 @@ export default function ManageBookingsClient() {
                     value={modalData.status || 'pending'}
                     disabled={readonly}
                     onChange={(val: BookingStatus) => setModalData({ ...modalData, status: val })}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', fontSize: 13 }}
                     variant="borderless"
                     options={statusOpts}
                   />
                 </div>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Tổng (₫)</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={formatCurrency(modalData.total || 0)}
-                  style={{ width: '100%', background: '#0a151f', border: '1px solid rgba(238,138,51,.15)', color: '#EE8A33', height: 42, boxSizing: 'border-box', padding: '0 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, outline: 'none', cursor: 'not-allowed' }}
-                />
+            </div>
+
+            {/* Total */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Tổng (₫)</label>
+              <div style={{ padding: '16px 20px', borderRadius: 10, background: 'linear-gradient(135deg, rgba(238,138,51,.12) 0%, rgba(238,138,51,.04) 100%)', border: '1px solid rgba(238,138,51,.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, color: 'rgba(241,236,225,.5)' }}>Tổng tiền dịch vụ</span>
+                <span style={{ fontSize: 22, fontWeight: 700, color: '#EE8A33', fontFamily: "'Hanken Grotesk',sans-serif", fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(modalData.total || 0)}</span>
               </div>
             </div>
 

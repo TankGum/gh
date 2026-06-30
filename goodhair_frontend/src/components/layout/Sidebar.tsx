@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layout, App } from 'antd';
+import { Layout } from 'antd';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBadge } from '@/contexts/BadgeContext';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import Modal from '@/components/ui/Modal';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -59,26 +60,27 @@ export default function Sidebar() {
   const router = useRouter();
   const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useSidebar();
   const { account, logout, canView } = useAuth();
-  const { modal } = App.useApp();
   const { pendingBookings, pendingAccounts, pendingBookingsList, pendingAccountsList } = useBadge();
   const [hovered, setHovered] = useState<string | null>(null);
   const [badgeHovered, setBadgeHovered] = useState<string | null>(null);
   const [badgePos, setBadgePos] = useState({ x: 0, y: 0 });
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const isMobile = useIsMobile();
 
   const handleLogout = () => {
-    modal.confirm({
-      title: 'Xác nhận đăng xuất',
-      content: 'Bạn có chắc chắn muốn đăng xuất?',
-      okText: 'Đăng xuất',
-      cancelText: 'Hủy',
-      centered: true,
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        await logout();
-        router.push('/login');
-      },
-    });
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      router.push('/login');
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
 
   const handleNav = (key: string) => {
@@ -375,6 +377,29 @@ export default function Sidebar() {
           </span>
         </div>
       </Sider>
+
+      <Modal open={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="Xác nhận đăng xuất" style={{ maxWidth: 340 }}>
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <p style={{ fontSize: 14, color: 'rgba(241,236,225,.6)', marginTop: 8, lineHeight: 1.55 }}>
+            Bạn có chắc chắn muốn đăng xuất?
+          </p>
+          <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+            <button
+              onClick={() => setShowLogoutModal(false)}
+              style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Hủy
+            </button>
+            <button
+              onClick={confirmLogout}
+              disabled={loggingOut}
+              style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: loggingOut ? 0.5 : 1 }}
+            >
+              {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

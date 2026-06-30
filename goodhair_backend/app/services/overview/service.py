@@ -73,7 +73,7 @@ class OverviewService:
             KpiCard(
                 label="Doanh thu",
                 value=self._fmt_compact(week_revenue),
-                delta=self._fmt_delta(delta_rev),
+                delta=self._fmt_delta_compact(delta_rev),
                 delta_positive=delta_rev >= 0,
                 sub="7 ngày qua",
             ),
@@ -267,3 +267,12 @@ class OverviewService:
         if delta < 0:
             return str(delta)
         return "0"
+
+    @staticmethod
+    def _fmt_delta_compact(delta: int) -> str:
+        abs_str = f"{abs(delta):,}".replace(",", ".")
+        if delta > 0:
+            return f"+{abs_str} VND"
+        if delta < 0:
+            return f"-{abs_str} VND"
+        return "0 VND"
