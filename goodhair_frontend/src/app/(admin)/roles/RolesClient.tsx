@@ -435,7 +435,7 @@ export default function RolesClient() {
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 7 }}>Tên vai trò</label>
               <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
-                <Input size="large" variant="borderless" value={editName} onChange={e => setEditName(e.target.value)} />
+                <Input size="large" variant="borderless" value={editName} onChange={e => setEditName(e.target.value)} placeholder="VD: Quản lý chi nhánh" />
               </div>
             </div>
             <div style={{ marginBottom: 16 }}>

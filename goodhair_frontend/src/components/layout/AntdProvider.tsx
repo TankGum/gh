@@ -52,6 +52,13 @@ export default function AntdProvider({ children }: { children: ReactNode }) {
             primaryColor: '#0B1620',
             primaryShadow: '0 2px 0 rgba(238,138,51,0.3)',
           },
+          Select: {
+            fontSizeLG: 13,
+            optionFontSize: 13,
+          },
+          Input: {
+            fontSizeLG: 13,
+          },
           Switch: {
             colorPrimary: '#10b981',
           },
