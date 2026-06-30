@@ -174,7 +174,7 @@ export default function BookingsClient() {
     (step === 2 && !!barberId) ||
     (step === 3 && serviceIds.length > 0) ||
     (step === 4 && !!(date && time)) ||
-    (step === 5 && name.trim().length > 1 && phone.trim().length >= 8);
+    (step === 5 && name.trim().length > 1 && /^0\d{9}$/.test(phone));
 
   const nextLabel = step === 5 ? t('Xác nhận đặt lịch', 'Confirm booking') : t('Tiếp tục →', 'Continue →');
 
@@ -547,7 +547,12 @@ export default function BookingsClient() {
                 </div>
                 <div>
                   <label style={{ fontSize: 12, letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,.5)', display: 'block', marginBottom: 8 }}>{t('Số điện thoại', 'Phone number')}</label>
-                  <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09xx xxx xxx" style={{ width: '100%', background: styles.cardBg, border: '1px solid rgba(238,138,51,.25)', color: styles.text, padding: '14px 16px', borderRadius: 4, fontFamily: hanken.style.fontFamily, fontSize: 15, outline: 'none' }} />
+                  <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="09xx xxx xxx"
+                    style={{ width: '100%', background: styles.cardBg, border: `1px solid ${phone && !/^0\d{9}$/.test(phone) ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: styles.text, padding: '14px 16px', borderRadius: 4, fontFamily: hanken.style.fontFamily, fontSize: 15, outline: 'none' }}
+                  />
+                  {phone && !/^0\d{9}$/.test(phone) && (
+                    <span style={{ fontSize: 12, color: '#EF4444', marginTop: 6, display: 'block' }}>{t('Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)', 'Invalid phone (10 digits, start with 0)')}</span>
+                  )}
                 </div>
               </div>
             </div>

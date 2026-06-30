@@ -215,7 +215,7 @@ export default function ManageBookingsClient() {
     const errs: Record<string, string> = {};
     if (!modalData?.customerName?.trim()) errs.customerName = 'Vui lòng nhập tên khách hàng';
     if (!modalData?.customerPhone?.trim()) errs.customerPhone = 'Vui lòng nhập số điện thoại';
-    else if (modalData.customerPhone.trim().length < 8) errs.customerPhone = 'Số điện thoại không hợp lệ';
+    else if (!/^0\d{9}$/.test(modalData.customerPhone.trim())) errs.customerPhone = 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)';
     if (!modalData?.branchId) errs.branchId = 'Vui lòng chọn chi nhánh';
     if (!modalData?.employeeId) errs.employeeId = 'Vui lòng chọn barber';
     if (!modalData?.date) errs.date = 'Vui lòng chọn ngày';
@@ -501,7 +501,7 @@ export default function ManageBookingsClient() {
                   value={modalData.customerName || ''}
                   disabled={readonly}
                   onChange={e => { setFormErrors(prev => ({ ...prev, customerName: '' })); setModalData({ ...modalData, customerName: e.target.value }); }}
-                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerName ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
+                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerName ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', height: 42, boxSizing: 'border-box', padding: '0 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
                 />
                 {formErrors.customerName && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerName}</span>}
               </div>
@@ -511,7 +511,7 @@ export default function ManageBookingsClient() {
                   value={modalData.customerPhone || ''}
                   disabled={readonly}
                   onChange={e => { setFormErrors(prev => ({ ...prev, customerPhone: '' })); setModalData({ ...modalData, customerPhone: e.target.value }); }}
-                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerPhone ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
+                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.customerPhone ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', height: 42, boxSizing: 'border-box', padding: '0 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', cursor: readonly ? 'default' : undefined }}
                 />
                 {formErrors.customerPhone && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.customerPhone}</span>}
               </div>
@@ -545,7 +545,8 @@ export default function ManageBookingsClient() {
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Chi nhánh</label>
                 <div style={{ border: `1px solid ${formErrors.branchId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
-                  <Select
+                    <Select
+                    size="large"
                     value={modalData.branchId || undefined}
                     disabled={readonly}
                     onChange={(val: string | undefined) => { setFormErrors(prev => ({ ...prev, branchId: '' })); setModalData({ ...modalData, branchId: val || null, employeeId: null }); }}
@@ -561,7 +562,8 @@ export default function ManageBookingsClient() {
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Barber</label>
                 <div style={{ border: `1px solid ${formErrors.employeeId ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
-                  <Select
+                    <Select
+                    size="large"
                     value={modalData.employeeId || undefined}
                     disabled={readonly}
                     onChange={(val: string | undefined) => { setFormErrors(prev => ({ ...prev, employeeId: '' })); setModalData({ ...modalData, employeeId: val || null }); }}
@@ -593,14 +595,15 @@ export default function ManageBookingsClient() {
                     if (val > maxDate) return setModalData({ ...modalData, date: maxDate });
                     setModalData({ ...modalData, date: val });
                   }}
-                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.date ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', colorScheme: 'dark', cursor: readonly ? 'default' : undefined }}
+                  style={{ width: '100%', background: readonly ? '#0a151f' : '#0B1620', border: `1px solid ${formErrors.date ? '#EF4444' : 'rgba(238,138,51,.25)'}`, color: '#F1ECE1', height: 42, boxSizing: 'border-box', padding: '0 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, outline: 'none', colorScheme: 'dark', cursor: readonly ? 'default' : undefined }}
                 />
                 {formErrors.date && <span style={{ fontSize: 11, color: '#EF4444', marginTop: 4, display: 'block' }}>{formErrors.date}</span>}
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Giờ bắt đầu</label>
                 <div style={{ border: `1px solid ${formErrors.startTime ? '#EF4444' : 'rgba(238,138,51,.25)'}`, borderRadius: 6 }}>
-                  <Select
+                    <Select
+                    size="large"
                     value={modalData.startTime || '09:00'}
                     disabled={readonly}
                     onChange={(val: string) => { setFormErrors(prev => ({ ...prev, startTime: '' })); setModalData({ ...modalData, startTime: val }); }}
@@ -614,7 +617,8 @@ export default function ManageBookingsClient() {
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'rgba(241,236,225,.55)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>Trạng thái</label>
                 <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
-                  <Select
+                    <Select
+                    size="large"
                     value={modalData.status || 'pending'}
                     disabled={readonly}
                     onChange={(val: BookingStatus) => setModalData({ ...modalData, status: val })}
@@ -630,7 +634,7 @@ export default function ManageBookingsClient() {
                   type="text"
                   readOnly
                   value={formatCurrency(modalData.total || 0)}
-                  style={{ width: '100%', background: '#0a151f', border: '1px solid rgba(238,138,51,.15)', color: '#EE8A33', padding: '10px 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, outline: 'none', cursor: 'not-allowed' }}
+                  style={{ width: '100%', background: '#0a151f', border: '1px solid rgba(238,138,51,.15)', color: '#EE8A33', height: 42, boxSizing: 'border-box', padding: '0 12px', borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, outline: 'none', cursor: 'not-allowed' }}
                 />
               </div>
             </div>

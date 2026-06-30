@@ -182,6 +182,18 @@ export default function RolesClient() {
     }
   };
 
+  const toggleAllPerm = (
+    perms: Record<string, PermissionMap>,
+    setter: (p: Record<string, PermissionMap>) => void,
+    moduleKey: string,
+  ) => {
+    const copy = clonePerms(perms);
+    const cell = copy[moduleKey] ?? { view: false, create: false, edit: false, delete: false };
+    const allGranted = cell.view && cell.create && cell.edit && cell.delete;
+    copy[moduleKey] = { view: !allGranted, create: !allGranted, edit: !allGranted, delete: !allGranted };
+    setter(copy);
+  };
+
   const togglePerm = (
     perms: Record<string, PermissionMap>,
     setter: (p: Record<string, PermissionMap>) => void,
@@ -311,15 +323,22 @@ export default function RolesClient() {
                   </div>
                   {PERM_MODULES.map(mod => {
                     const perms = selectedPerms[mod.key];
+                    const allGranted = perms?.view && perms?.create && perms?.edit && perms?.delete;
+                    const noneGranted = !perms?.view && !perms?.create && !perms?.edit && !perms?.delete;
                     return (
                       <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '12px 22px', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ width: 18, height: 18, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.2)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent' }}>
+                            {allGranted ? '✓' : noneGranted ? '' : '–'}
+                          </span>
+                          <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
+                        </div>
                         {PERM_ACTIONS.map(a => {
                           const granted = perms?.[a.key as keyof PermissionMap] ?? false;
                           return (
                             <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
-                              <span style={{ width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, background: granted ? 'rgba(238,138,51,0.2)' : 'transparent', color: granted ? '#EE8A33' : 'rgba(241,236,225,0.2)' }}>
-                                {granted ? '✓' : '—'}
+                              <span style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, border: granted ? 'none' : '1px solid rgba(241,236,225,0.2)', background: granted ? '#EE8A33' : 'transparent', color: granted ? '#0B1620' : 'transparent' }}>
+                                {granted ? '✓' : ''}
                               </span>
                             </div>
                           );
@@ -339,11 +358,15 @@ export default function RolesClient() {
         <div style={{ marginTop: 8 }}>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 7 }}>Tên vai trò</label>
-            <Input value={createName} onChange={e => setCreateName(e.target.value)} placeholder="VD: Quản lý chi nhánh" />
+            <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+              <Input size="large" variant="borderless" value={createName} onChange={e => setCreateName(e.target.value)} placeholder="VD: Quản lý chi nhánh" />
+            </div>
           </div>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 7 }}>Mô tả</label>
-            <Input value={createDesc} onChange={e => setCreateDesc(e.target.value)} placeholder="Mô tả ngắn về vai trò..." />
+            <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+              <Input size="large" variant="borderless" value={createDesc} onChange={e => setCreateDesc(e.target.value)} placeholder="Mô tả ngắn về vai trò..." />
+            </div>
           </div>
           <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
@@ -362,18 +385,27 @@ export default function RolesClient() {
           <div style={{ maxHeight: 320, overflowY: 'auto' }}>
             {PERM_MODULES.map(mod => {
               const perms = createPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
+              const allGranted = perms.view && perms.create && perms.edit && perms.delete;
               return (
                 <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button
+                      onClick={() => toggleAllPerm(createPerms, setCreatePerms, mod.key)}
+                      style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent', padding: 0 }}
+                    >
+                      {allGranted ? '✓' : ''}
+                    </button>
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
+                  </div>
                   {PERM_ACTIONS.map(a => {
                     const granted = perms[a.key as keyof PermissionMap];
                     return (
                       <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
                         <button
                           onClick={() => togglePerm(createPerms, setCreatePerms, mod.key, a.key)}
-                          style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, cursor: 'pointer', border: 'none', background: granted ? '#EE8A33' : 'rgba(241,236,225,0.08)', color: granted ? '#0B1620' : 'rgba(241,236,225,0.3)' }}
+                          style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: granted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: granted ? '#EE8A33' : 'transparent', color: granted ? '#0B1620' : 'transparent', padding: 0 }}
                         >
-                          {granted ? '✓' : '—'}
+                          {granted ? '✓' : ''}
                         </button>
                       </div>
                     );
@@ -402,11 +434,15 @@ export default function RolesClient() {
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 7 }}>Tên vai trò</label>
-              <Input value={editName} onChange={e => setEditName(e.target.value)} />
+              <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+                <Input size="large" variant="borderless" value={editName} onChange={e => setEditName(e.target.value)} />
+              </div>
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 7 }}>Mô tả</label>
-              <Input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Mô tả ngắn về vai trò..." />
+              <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+                <Input size="large" variant="borderless" value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder="Mô tả ngắn về vai trò..." />
+              </div>
             </div>
             <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
               <button
@@ -425,18 +461,27 @@ export default function RolesClient() {
             <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               {PERM_MODULES.map(mod => {
                 const perms = editPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
+                const allGranted = perms.view && perms.create && perms.edit && perms.delete;
                 return (
                   <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
-                    <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <button
+                        onClick={() => toggleAllPerm(editPerms, setEditPerms, mod.key)}
+                        style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent', padding: 0 }}
+                      >
+                        {allGranted ? '✓' : ''}
+                      </button>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
+                    </div>
                     {PERM_ACTIONS.map(a => {
                       const granted = perms[a.key as keyof PermissionMap];
                       return (
                         <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
                           <button
                             onClick={() => togglePerm(editPerms, setEditPerms, mod.key, a.key)}
-                            style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, cursor: 'pointer', border: 'none', background: granted ? '#EE8A33' : 'rgba(241,236,225,0.08)', color: granted ? '#0B1620' : 'rgba(241,236,225,0.3)' }}
+                            style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: granted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: granted ? '#EE8A33' : 'transparent', color: granted ? '#0B1620' : 'transparent', padding: 0 }}
                           >
-                            {granted ? '✓' : '—'}
+                            {granted ? '✓' : ''}
                           </button>
                         </div>
                       );

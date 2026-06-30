@@ -103,7 +103,9 @@ function fieldStyle(hasError?: boolean): CSSProperties {
     background: '#0B1620',
     border: `1px solid ${hasError ? '#EF4444' : 'rgba(238,138,51,.25)'}`,
     color: '#F1ECE1',
-    padding: '10px 12px',
+    height: 42,
+    boxSizing: 'border-box',
+    padding: '0 12px',
     borderRadius: 6,
     fontSize: 13,
     outline: 'none',
@@ -263,6 +265,7 @@ function BranchForm({
           <label style={labelStyle}>Trạng thái hoạt động</label>
           <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
             <Select
+              size="large"
               value={form.status}
               onChange={(val: BranchStatus) => onChange({ status: val })}
               style={{ width: '100%' }}
