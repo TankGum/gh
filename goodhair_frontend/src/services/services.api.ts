@@ -85,3 +85,22 @@ export async function updateService(
 export async function deleteService(id: string): Promise<void> {
   await clientFetch(`/services/${id}`, { method: 'DELETE' });
 }
+
+// Upload ảnh: multipart -> để browser tự set Content-Type kèm boundary.
+export async function uploadServiceImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_URL}/services/image`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { messageKey?: string; detail?: unknown } | null;
+    const msg = body?.messageKey ?? (typeof body?.detail === 'string' ? body.detail : `API error: ${res.status} ${res.statusText}`);
+    throw new Error(msg);
+  }
+  const data = (await res.json()) as { imageUrl: string };
+  return data.imageUrl;
+}

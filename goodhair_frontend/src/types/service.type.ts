@@ -4,6 +4,7 @@ export interface HairService {
   id: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   durationMinutes: number;
   price: number;
   status: ServiceStatus;
@@ -18,6 +19,7 @@ export interface HairService {
 export interface ServiceCreatePayload {
   name: string;
   description?: string | null;
+  imageUrl?: string | null;
   durationMinutes: number;
   price: number;
   status?: ServiceStatus;
@@ -28,6 +30,7 @@ export interface ServiceCreatePayload {
 export interface ServiceUpdatePayload {
   name?: string;
   description?: string | null;
+  imageUrl?: string | null;
   durationMinutes?: number;
   price?: number;
   status?: ServiceStatus;

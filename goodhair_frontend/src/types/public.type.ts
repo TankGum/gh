@@ -22,6 +22,7 @@ export interface PublicService {
   id: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   durationMinutes: number;
   price: number;
   isAllBranches: boolean;

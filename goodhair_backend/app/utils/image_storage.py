@@ -115,3 +115,7 @@ async def upload_branch_image(*, data: bytes, content_type: str | None) -> str:
 
 async def upload_employee_image(*, data: bytes, content_type: str | None) -> str:
     return await upload_image(data=data, content_type=content_type, folder="goodhair/employees")
+
+
+async def upload_service_image(*, data: bytes, content_type: str | None) -> str:
+    return await upload_image(data=data, content_type=content_type, folder="goodhair/services")

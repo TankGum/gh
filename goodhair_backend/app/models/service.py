@@ -43,6 +43,7 @@ class Service(
 
     name: Mapped[str] = mapped_column(String(255), index=True)
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     duration_minutes: Mapped[int] = mapped_column(Integer)
     price: Mapped[int] = mapped_column(Integer)
     status: Mapped[ServiceStatus] = mapped_column(

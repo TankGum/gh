@@ -80,7 +80,7 @@ const getInitials = (name: string) =>
 // Ảnh demo tạm cho barber chưa có avatar — xoay vòng theo thứ tự
 const BARBER_DEMO_IMAGES = ['/barber_demo/b1.jpg', '/barber_demo/b2.jpg', '/barber_demo/b3.jpg'];
 
-// Ảnh demo tạm cho dịch vụ (API chưa có ảnh) — chọn theo từ khóa trong tên/mô tả
+// Ảnh demo fallback cho dịch vụ chưa upload ảnh — chọn theo từ khóa trong tên/mô tả
 const serviceDemoImage = (name: string, description: string | null) => {
   const s = `${name} ${description ?? ''}`.toLowerCase();
   if (/nhuộm|nhuom|color|bleach|blecnt/.test(s)) return '/service_demo/color.jpg';
@@ -256,7 +256,7 @@ export default function HomePage() {
         `${svc.durationMinutes} phút được chăm chút bởi barber bậc thầy — giá minh bạch, không phát sinh, đặt lịch chỉ trong 30 giây.`,
         `${svc.durationMinutes} minutes in the hands of a master barber — transparent pricing, no surprises, booked in 30 seconds.`,
       ),
-      image: serviceDemoImage(svc.name, svc.description),
+      image: svc.imageUrl || serviceDemoImage(svc.name, svc.description),
       fallback: FALLBACK_BGS[i % FALLBACK_BGS.length],
       initials: getInitials(svc.name),
       cardSub: `${svc.durationMinutes}P · ${shortPrice(svc.price)}`,
@@ -375,6 +375,29 @@ export default function HomePage() {
   const rail = deck.length > 1
     ? [...deck.slice(safeIndex + 1), ...deck.slice(0, safeIndex)].slice(0, 6)
     : [];
+
+  // Kéo ngang dải card bằng chuột (touch đã có scroll native của trình duyệt)
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const railDrag = useRef({ down: false, startX: 0, scrollLeft: 0, moved: false });
+
+  const onRailPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== 'mouse') return;
+    const el = railRef.current;
+    if (!el) return;
+    railDrag.current = { down: true, startX: e.clientX, scrollLeft: el.scrollLeft, moved: false };
+  };
+  const onRailPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const st = railDrag.current;
+    const el = railRef.current;
+    if (!st.down || !el) return;
+    const dx = e.clientX - st.startX;
+    if (!st.moved && Math.abs(dx) > 6) {
+      st.moved = true;
+      el.setPointerCapture(e.pointerId);
+    }
+    if (st.moved) el.scrollLeft = st.scrollLeft - dx;
+  };
+  const onRailPointerUp = () => { railDrag.current.down = false; };
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'branches', label: t('Chi nhánh', 'Locations') },
@@ -717,7 +740,17 @@ export default function HomePage() {
       )}
 
       {/* ===== DẢI CARD BÊN PHẢI ===== */}
-      <div className="ghx-rail" key={`rail-${tab}-${safeIndex}`} style={{ position: 'absolute', zIndex: 30, left: '52%', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 20, overflow: 'hidden', paddingLeft: 8 }}>
+      <div
+        className="ghx-rail"
+        key={`rail-${tab}-${safeIndex}`}
+        ref={railRef}
+        onPointerDown={onRailPointerDown}
+        onPointerMove={onRailPointerMove}
+        onPointerUp={onRailPointerUp}
+        onPointerCancel={onRailPointerUp}
+        onDragStart={e => e.preventDefault()}
+        style={{ position: 'absolute', zIndex: 30, left: '52%', right: 0, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 20, overflowX: 'auto', overflowY: 'hidden', padding: '14px 20px 14px 8px', scrollbarWidth: 'none', userSelect: 'none', touchAction: 'pan-x' }}
+      >
         {deckLoading && slides.length === 0
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="ghx-card-shell" style={{ width: 192, height: 312, borderRadius: 18, background: 'rgba(241,236,225,.07)', flexShrink: 0, animation: `ghPulse 1.4s ease ${i * .12}s infinite` }} />
@@ -725,12 +758,12 @@ export default function HomePage() {
           : rail.map(s => (
               <button
                 key={s.key}
-                onClick={() => setIndex(deck.indexOf(s))}
+                onClick={() => { if (railDrag.current.moved) return; setIndex(deck.indexOf(s)); }}
                 className="ghx-card"
                 style={{ position: 'relative', width: 192, height: 312, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,.32)', padding: 0, cursor: 'pointer', flexShrink: 0, background: '#101C28', boxShadow: '0 6px 18px rgba(0,0,0,.45), 0 24px 60px rgba(0,0,0,.6)', textAlign: 'left' }}
               >
                 {s.image ? (
-                  <img src={s.image} alt={s.title} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={s.image} alt={s.title} loading="lazy" decoding="async" draggable={false} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ position: 'absolute', inset: 0, background: s.fallback, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 64, fontWeight: 800, color: 'rgba(241,236,225,.14)' }}>{s.initials}</span>
@@ -883,6 +916,9 @@ export default function HomePage() {
         .ghx-cta:hover .ghx-cta-arrow { transform: translateX(4px) rotate(-45deg); }
         .ghx-cta:active { transform: translateY(-1px) scale(.98); }
         .ghx-pill::-webkit-scrollbar { display: none; }
+        .ghx-rail { cursor: grab; }
+        .ghx-rail:active { cursor: grabbing; }
+        .ghx-rail::-webkit-scrollbar { display: none; }
 
         .ghx-sb-item {
           opacity: 0;
