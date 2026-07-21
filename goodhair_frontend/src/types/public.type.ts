@@ -26,6 +26,7 @@ export interface PublicService {
   durationMinutes: number;
   price: number;
   isAllBranches: boolean;
+  isFeatured: boolean;
   branchIds: string[];
 }
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Select, App, Pagination } from 'antd';
-import { Trash2, Pencil, Upload } from 'lucide-react';
+import { Trash2, Pencil, Upload, Lock } from 'lucide-react';
 import FilterBar from '@/components/ui/FilterBar';
 import { fetchEmployees, updateEmployee, deleteEmployee, uploadEmployeeImage } from '@/services/employees.api';
 import { fetchBranches } from '@/services/branches.api';
@@ -209,20 +209,32 @@ export default function EmployeesClient() {
       header: 'Thao tác',
       width: '60px',
       align: 'right',
-      render: emp => (
-        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-          {canEdit && (
-            <button onClick={() => setEditTarget({ ...emp })} title="Sửa" className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
-              <Pencil size={13} />
-            </button>
-          )}
-          {canDelete && (
-            <button onClick={() => setDeleteTarget(emp)} title="Xóa" className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors cursor-pointer">
-              <Trash2 size={13} />
-            </button>
-          )}
-        </div>
-      ),
+      render: emp => {
+        const isAdmin = roles.find(r => r.id === emp.roleId)?.isSystem ?? false;
+        if (isAdmin) {
+          return (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, color: 'rgba(241,236,225,.35)' }} title="Tài khoản quản trị viên được bảo vệ">
+                <Lock size={13} />
+              </span>
+            </div>
+          );
+        }
+        return (
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+            {canEdit && (
+              <button onClick={() => setEditTarget({ ...emp })} title="Sửa" className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+                <Pencil size={13} />
+              </button>
+            )}
+            {canDelete && (
+              <button onClick={() => setDeleteTarget(emp)} title="Xóa" className="w-7 h-7 flex items-center justify-center rounded border border-white/10 bg-white/5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors cursor-pointer">
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

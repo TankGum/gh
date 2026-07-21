@@ -86,6 +86,15 @@ export async function deleteService(id: string): Promise<void> {
   await clientFetch(`/services/${id}`, { method: 'DELETE' });
 }
 
+// Lưu lại thứ tự hiển thị mới sau khi kéo-thả. `ids` là danh sách id theo
+// đúng thứ tự mong muốn (index -> sortOrder).
+export async function reorderServices(ids: string[]): Promise<void> {
+  await clientFetch('/services/reorder', {
+    method: 'PATCH',
+    body: JSON.stringify({ ids }),
+  });
+}
+
 // Upload ảnh: multipart -> để browser tự set Content-Type kèm boundary.
 export async function uploadServiceImage(file: File): Promise<string> {
   const formData = new FormData();

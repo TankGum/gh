@@ -11,6 +11,7 @@ from app.schemas.service import (
     ServiceCreate,
     ServiceImageUploadResult,
     ServiceRead,
+    ServiceReorder,
     ServiceUpdate,
 )
 from app.services.services_catalog.service import ServiceCatalogService
@@ -66,6 +67,17 @@ async def create_service(
     ),
 ) -> ServiceRead:
     return await service.create_service(payload)
+
+
+@router.patch("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+async def reorder_services(
+    payload: ServiceReorder,
+    service: ServiceCatalogService = Depends(get_service_catalog_service),
+    _: None = Depends(
+        require_permission(PermissionModule.SERVICES, PermissionAction.EDIT)
+    ),
+) -> None:
+    await service.reorder_services(payload.ids)
 
 
 @router.get("/{service_id}", response_model=ServiceRead)

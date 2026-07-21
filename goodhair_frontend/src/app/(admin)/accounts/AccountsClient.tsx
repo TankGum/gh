@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Pagination } from 'antd';
+import { Pagination, App } from 'antd';
 import FilterBar from '@/components/ui/FilterBar';
 import FilterSelect from '@/components/ui/FilterSelect';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
@@ -9,6 +9,7 @@ import { fetchAccounts, approveAccount, rejectAccount } from '@/services/auth.ap
 import type { Account, AccountStatus } from '@/types/account.type';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBadge } from '@/contexts/BadgeContext';
+import Modal from '@/components/ui/Modal';
 
 const STATUS_TABS: { label: string; value: AccountStatus | '' }[] = [
   { label: 'Tất cả', value: '' },
@@ -30,6 +31,7 @@ function formatDate(iso: string) {
 }
 
 export default function AccountsClient() {
+  const { message } = App.useApp();
   const { can } = useAuth();
   const canApproveReject = can('roles', 'edit');
   const { refreshBadges } = useBadge();
@@ -40,6 +42,7 @@ export default function AccountsClient() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState<string | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<Account | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [sortBy, setSortBy] = useState<string | undefined>(undefined);
@@ -68,6 +71,10 @@ export default function AccountsClient() {
       await approveAccount(id);
       await refresh();
       refreshBadges();
+      setReviewTarget(null);
+    } catch (e) {
+      const err = e as { detail?: { message?: string } };
+      message.error(err?.detail?.message || 'Duyệt thất bại');
     } finally {
       setActioning(null);
     }
@@ -79,6 +86,10 @@ export default function AccountsClient() {
       await rejectAccount(id);
       await refresh();
       refreshBadges();
+      setReviewTarget(null);
+    } catch (e) {
+      const err = e as { detail?: { message?: string } };
+      message.error(err?.detail?.message || 'Từ chối thất bại');
     } finally {
       setActioning(null);
     }
@@ -146,24 +157,38 @@ export default function AccountsClient() {
       key: 'actions',
       header: 'Hành động',
       width: '180px',
-      render: acc => acc.status === 'pending' && canApproveReject ? (
-        <div style={{ display: 'flex', gap: 8 }}>
+      render: acc => {
+        if (!canApproveReject) return null;
+        if (acc.status === 'pending') {
+          return (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => handleApprove(acc.id)}
+                disabled={actioning === acc.id}
+                style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: actioning === acc.id ? 0.6 : 1 }}
+              >
+                Duyệt
+              </button>
+              <button
+                onClick={() => handleReject(acc.id)}
+                disabled={actioning === acc.id}
+                style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: actioning === acc.id ? 0.6 : 1 }}
+              >
+                Từ chối
+              </button>
+            </div>
+          );
+        }
+        return (
           <button
-            onClick={() => handleApprove(acc.id)}
+            onClick={() => setReviewTarget(acc)}
             disabled={actioning === acc.id}
-            style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: actioning === acc.id ? 0.6 : 1 }}
+            style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid rgba(238,138,51,.4)', background: 'transparent', color: '#EE8A33', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: actioning === acc.id ? 0.6 : 1 }}
           >
-            Duyệt
+            Xem xét lại
           </button>
-          <button
-            onClick={() => handleReject(acc.id)}
-            disabled={actioning === acc.id}
-            style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: actioning === acc.id ? 0.6 : 1 }}
-          >
-            Từ chối
-          </button>
-        </div>
-      ) : null,
+        );
+      },
     },
   ];
 
@@ -215,6 +240,62 @@ export default function AccountsClient() {
           />
         }
       />
+
+      {/* Review modal — flip an approved/rejected decision */}
+      <Modal
+        open={!!reviewTarget}
+        onClose={() => setReviewTarget(null)}
+        title="Xem xét lại tài khoản"
+        style={{ maxWidth: 440 }}
+      >
+        {reviewTarget && (
+          <div style={{ padding: '4px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+              {reviewTarget.avatarUrl ? (
+                <img src={reviewTarget.avatarUrl} alt={reviewTarget.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#16110C', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EE8A33', fontWeight: 700, fontSize: 16, flexShrink: 0 }}>
+                  {reviewTarget.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: '#F1ECE1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reviewTarget.name}</div>
+                <div style={{ fontSize: 12.5, color: 'rgba(241,236,225,.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{reviewTarget.email}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, fontSize: 13, color: 'rgba(241,236,225,.7)' }}>
+              <span>Trạng thái hiện tại:</span>
+              <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 11px', borderRadius: 20, background: STATUS_BADGE[reviewTarget.status].bg, color: STATUS_BADGE[reviewTarget.status].color }}>
+                {STATUS_BADGE[reviewTarget.status].label}
+              </span>
+            </div>
+
+            <p style={{ fontSize: 13, color: 'rgba(241,236,225,.55)', margin: '0 0 20px', lineHeight: 1.55 }}>
+              {reviewTarget.status === 'approved'
+                ? 'Từ chối sẽ thu hồi quyền truy cập, tài khoản này sẽ không thể đăng nhập.'
+                : 'Duyệt sẽ cấp lại quyền truy cập, tài khoản này có thể đăng nhập lại.'}
+            </p>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => handleReject(reviewTarget.id)}
+                disabled={actioning === reviewTarget.id || reviewTarget.status === 'rejected'}
+                style={{ flex: 1, padding: 12, borderRadius: 6, border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: 13, fontWeight: 700, cursor: reviewTarget.status === 'rejected' ? 'default' : 'pointer', opacity: (actioning === reviewTarget.id || reviewTarget.status === 'rejected') ? 0.4 : 1 }}
+              >
+                Từ chối
+              </button>
+              <button
+                onClick={() => handleApprove(reviewTarget.id)}
+                disabled={actioning === reviewTarget.id || reviewTarget.status === 'approved'}
+                style={{ flex: 1, padding: 12, borderRadius: 6, border: 'none', background: '#10b981', color: '#fff', fontSize: 13, fontWeight: 700, cursor: reviewTarget.status === 'approved' ? 'default' : 'pointer', opacity: (actioning === reviewTarget.id || reviewTarget.status === 'approved') ? 0.4 : 1 }}
+              >
+                Duyệt
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
