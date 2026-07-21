@@ -4,11 +4,11 @@ import { useState, useCallback, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { Select, App, Pagination } from 'antd';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, Scissors } from 'lucide-react';
 import FilterBar from '@/components/ui/FilterBar';
 import Modal from '@/components/ui/Modal';
 import { HairService, ServiceCreatePayload, ServiceUpdatePayload, ServiceStatus } from '@/types/service.type';
-import { createService, fetchServices, updateService, deleteService } from '@/services/services.api';
+import { createService, fetchServices, updateService, deleteService, uploadServiceImage } from '@/services/services.api';
 import { fetchBranches, type Branch } from '@/services/branches.api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -69,6 +69,9 @@ export default function ServiceClient() {
   // Form state
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [formImageUrl, setFormImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [formDuration, setFormDuration] = useState(30);
   const [formPrice, setFormPrice] = useState(0);
   const [formIsActive, setFormIsActive] = useState(true);
@@ -107,10 +110,26 @@ export default function ServiceClient() {
       .finally(() => setBranchesLoading(false));
   }, []);
 
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const url = await uploadServiceImage(file);
+      setFormImageUrl(url);
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : 'Upload ảnh thất bại.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const openCreate = () => {
     setEditingService(null);
     setFormName('');
     setFormDescription('');
+    setFormImageUrl('');
+    setUploadError(null);
     setFormDuration(30);
     setFormPrice(0);
     setFormIsActive(true);
@@ -124,6 +143,8 @@ export default function ServiceClient() {
     setEditingService(svc);
     setFormName(svc.name);
     setFormDescription(svc.description ?? '');
+    setFormImageUrl(svc.imageUrl ?? '');
+    setUploadError(null);
     setFormDuration(svc.durationMinutes);
     setFormPrice(svc.price);
     setFormIsActive(svc.status === 'active');
@@ -150,6 +171,7 @@ export default function ServiceClient() {
         const payload: ServiceUpdatePayload = {};
         if (formName !== editingService.name) payload.name = formName;
         if (formDescription !== (editingService.description ?? '')) payload.description = formDescription || null;
+        if (formImageUrl !== (editingService.imageUrl ?? '')) payload.imageUrl = formImageUrl || null;
         if (formDuration !== editingService.durationMinutes) payload.durationMinutes = formDuration;
         if (formPrice !== editingService.price) payload.price = formPrice;
         if (status !== editingService.status) payload.status = status;
@@ -161,6 +183,7 @@ export default function ServiceClient() {
         const payload: ServiceCreatePayload = {
           name: formName,
           description: formDescription || null,
+          imageUrl: formImageUrl || null,
           durationMinutes: formDuration,
           price: formPrice,
           status,
@@ -208,7 +231,19 @@ export default function ServiceClient() {
       width: '1.6fr',
       sortable: true,
       sortField: 'name',
-      render: svc => <span style={{ fontSize: 13.5, fontWeight: 700, color: '#F1ECE1' }}>{svc.name}</span>,
+      render: svc => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 6, background: '#0B1620', border: '1px solid rgba(238,138,51,.16)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {svc.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={svc.imageUrl} alt={svc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <Scissors size={14} style={{ color: 'rgba(241,236,225,0.2)' }} />
+            )}
+          </div>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#F1ECE1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}</span>
+        </div>
+      ),
     },
     {
       key: 'description',
@@ -337,6 +372,34 @@ export default function ServiceClient() {
         <div style={{ padding: '8px 0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+            {/* Image upload */}
+            <div>
+              <label style={labelStyle}>Ảnh dịch vụ</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 80, height: 80, borderRadius: 8, background: '#0B1620', border: '1px solid rgba(238,138,51,.16)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {formImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={formImageUrl} alt="service" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <Scissors size={26} style={{ color: 'rgba(241,236,225,0.2)' }} />
+                  )}
+                </div>
+                <div>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer', background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: '#EE8A33', padding: '8px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, fontFamily: "'Hanken Grotesk',sans-serif" }}>
+                    <Upload size={14} />
+                    {uploading ? 'Đang tải...' : 'Chọn ảnh'}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => handleFile(e.target.files?.[0])} />
+                  </label>
+                  {formImageUrl && (
+                    <button type="button" onClick={() => setFormImageUrl('')} style={{ marginLeft: 8, background: 'none', border: 'none', color: '#EF4444', fontSize: 12, cursor: 'pointer', fontFamily: "'Hanken Grotesk',sans-serif" }}>
+                      Xóa ảnh
+                    </button>
+                  )}
+                  {uploadError && <span style={errStyle}>{uploadError}</span>}
+                </div>
+              </div>
+            </div>
+
             <div>
               <label style={labelStyle}>Tên dịch vụ *</label>
               <input
@@ -441,8 +504,8 @@ export default function ServiceClient() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting}
-                style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
+                disabled={submitting || uploading}
+                style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (submitting || uploading) ? 0.5 : 1 }}
               >
                 {submitting ? 'Đang lưu...' : (editingService ? 'Lưu thay đổi' : 'Tạo dịch vụ')}
               </button>

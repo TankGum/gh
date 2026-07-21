@@ -10,6 +10,7 @@ from app.schemas.base import AppSchema
 class ServiceBase(AppSchema):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=500)
+    image_url: str | None = Field(default=None, max_length=1000)
     duration_minutes: int = Field(ge=1)
     price: int = Field(ge=0)
     status: ServiceStatus = ServiceStatus.ACTIVE
@@ -29,6 +30,7 @@ class ServiceCreate(ServiceBase):
 class ServiceUpdate(AppSchema):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=500)
+    image_url: str | None = Field(default=None, max_length=1000)
     duration_minutes: int | None = Field(default=None, ge=1)
     price: int | None = Field(default=None, ge=0)
     status: ServiceStatus | None = None
@@ -43,3 +45,7 @@ class ServiceRead(ServiceBase):
     total_branches: int
     created_at: datetime
     updated_at: datetime
+
+
+class ServiceImageUploadResult(AppSchema):
+    image_url: str

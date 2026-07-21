@@ -1,14 +1,20 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_permission
 from app.core.constants import PermissionAction, PermissionModule, ServiceStatus
 from app.db.session import get_db_session
 from app.schemas.base import PageParams, PaginatedResponse
-from app.schemas.service import ServiceCreate, ServiceRead, ServiceUpdate
+from app.schemas.service import (
+    ServiceCreate,
+    ServiceImageUploadResult,
+    ServiceRead,
+    ServiceUpdate,
+)
 from app.services.services_catalog.service import ServiceCatalogService
+from app.utils.image_storage import upload_service_image as cloudinary_upload_service
 
 router = APIRouter()
 
@@ -37,6 +43,18 @@ async def list_services(
         page=page,
     )
     return PaginatedResponse.create(items=items, total=total, page=page)
+
+
+@router.post("/image", response_model=ServiceImageUploadResult)
+async def upload_service_image(
+    file: UploadFile,
+    _: None = Depends(
+        require_permission(PermissionModule.SERVICES, PermissionAction.CREATE)
+    ),
+) -> ServiceImageUploadResult:
+    data = await file.read()
+    image_url = await cloudinary_upload_service(data=data, content_type=file.content_type)
+    return ServiceImageUploadResult(image_url=image_url)
 
 
 @router.post("", response_model=ServiceRead, status_code=status.HTTP_201_CREATED)

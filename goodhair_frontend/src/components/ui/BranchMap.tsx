@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import type { PublicBranch } from '@/types/public.type';
 
 interface Props {
   branches: PublicBranch[];
   t: (vi: string, en: string) => string;
+  nearestId?: string | null;
 }
 
-export default function BranchMap({ branches, t }: Props) {
+export default function BranchMap({ branches, t, nearestId }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -18,7 +19,12 @@ export default function BranchMap({ branches, t }: Props) {
     import('leaflet').then(() => setLoaded(true));
   }, []);
 
-  const withCoords = branches.filter(b => b.latitude != null && b.longitude != null);
+  // useMemo giữ nguyên identity giữa các lần render — tránh effect bên dưới
+  // hủy & dựng lại map (tải lại tiles, mất vị trí zoom) mỗi khi cha re-render.
+  const withCoords = useMemo(
+    () => branches.filter(b => b.latitude != null && b.longitude != null),
+    [branches],
+  );
 
   useEffect(() => {
     if (!loaded || !mapRef.current || mapInstance.current) return;
@@ -34,6 +40,13 @@ export default function BranchMap({ branches, t }: Props) {
         iconAnchor: [16, 32],
         popupAnchor: [0, -36],
       });
+      const nearestIcon = L.divIcon({
+        className: '',
+        html: '<span style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;background:#EE8A33;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 6px rgba(238,138,51,.28),0 2px 12px rgba(0,0,0,.5);font-size:16px;font-weight:700;color:#0B1620">\u2702</span>',
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
+        popupAnchor: [0, -44],
+      });
 
       try {
         const map = L.map(mapRef.current!, {
@@ -47,22 +60,29 @@ export default function BranchMap({ branches, t }: Props) {
         }).addTo(map);
 
         const bounds: L.LatLngTuple[] = [];
+        let nearestMarker: L.Marker | null = null;
         withCoords.forEach(b => {
           const latlng: L.LatLngTuple = [b.latitude!, b.longitude!];
           bounds.push(latlng);
-          L.marker(latlng, { icon })
+          const isNearest = b.id === nearestId;
+          const marker = L.marker(latlng, { icon: isNearest ? nearestIcon : icon })
             .addTo(map)
             .bindPopup(`
               <div style="font-family:sans-serif;font-size:13px;line-height:1.5">
                 <strong style="font-size:15px">${b.name}</strong>
+                ${isNearest ? `<br><span style="color:#EE8A33;font-weight:700">${t('G\u1ea7n b\u1ea1n nh\u1ea5t', 'Nearest to you')}</span>` : ''}
                 ${b.address ? `<br><span style="color:#666">${b.address}</span>` : ''}
                 ${b.openingTime && b.closingTime ? `<br><span style="color:#999">${b.openingTime.slice(0,5)} \u2013 ${b.closingTime.slice(0,5)}</span>` : ''}
               </div>
             `);
+          if (isNearest) nearestMarker = marker;
         });
 
         if (bounds.length > 0) {
           map.fitBounds(bounds, { padding: [40, 40] });
+        }
+        if (nearestMarker) {
+          (nearestMarker as L.Marker).openPopup();
         }
 
         mapInstance.current = map;
@@ -75,7 +95,7 @@ export default function BranchMap({ branches, t }: Props) {
         mapInstance.current = null;
       }
     };
-  }, [loaded, withCoords]);
+  }, [loaded, withCoords, nearestId, t]);
 
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 480, position: 'relative' }}>

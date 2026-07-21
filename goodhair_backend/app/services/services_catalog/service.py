@@ -14,6 +14,7 @@ from app.schemas.base import PageParams
 from app.schemas.service import ServiceCreate, ServiceRead, ServiceUpdate
 from app.services.activity_logs.labels import SERVICE_LABELS
 from app.services.activity_logs.service import ActivityLogService
+from app.utils.image_storage import delete_cloudinary_image
 
 
 class ServiceCatalogService:
@@ -62,6 +63,7 @@ class ServiceCatalogService:
         service = Service(
             name=payload.name,
             description=payload.description,
+            image_url=payload.image_url,
             duration_minutes=payload.duration_minutes,
             price=payload.price,
             status=payload.status,
@@ -94,6 +96,7 @@ class ServiceCatalogService:
             exclude_unset=True,
             exclude={"is_all_branches", "branch_ids"},
         )
+        old_image_url = service.image_url if "image_url" in scalar_data else None
         before = {k: getattr(service, k) for k in scalar_data}
         for field, value in scalar_data.items():
             setattr(service, field, value)
@@ -130,11 +133,14 @@ class ServiceCatalogService:
             target_label=service.name,
             changes=changes,
         )
+        if old_image_url and old_image_url != scalar_data.get("image_url"):
+            await delete_cloudinary_image(old_image_url)
         total_branches = await self.branch_repository.count_active()
         return self._to_read(service, total_branches)
 
     async def delete_service(self, service_id: UUID) -> None:
         service = await self._get_or_404(service_id)
+        image_url = service.image_url
         await self.service_repository.soft_delete(service)
         await self.activity.log(
             ActivityAction.DELETE,
@@ -143,6 +149,7 @@ class ServiceCatalogService:
             entity_id=service.id,
             target_label=service.name,
         )
+        await delete_cloudinary_image(image_url)
 
     async def _get_or_404(self, service_id: UUID) -> Service:
         service = await self.service_repository.get_active_by_id(service_id)
@@ -191,6 +198,7 @@ class ServiceCatalogService:
             id=service.id,
             name=service.name,
             description=service.description,
+            image_url=service.image_url,
             duration_minutes=service.duration_minutes,
             price=service.price,
             status=service.status,

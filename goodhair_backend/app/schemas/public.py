@@ -32,6 +32,7 @@ class PublicServiceRead(AppSchema):
     id: UUID
     name: str
     description: str | None = None
+    image_url: str | None = None
     duration_minutes: int
     price: int
     is_all_branches: bool = True
