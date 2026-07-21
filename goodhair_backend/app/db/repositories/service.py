@@ -57,7 +57,10 @@ class ServiceRepository(BaseRepository[Service]):
             col = getattr(Service, sort_by)
             stmt = stmt.order_by(col.desc() if sort_order == "desc" else col.asc())
         else:
-            stmt = stmt.order_by(Service.created_at.desc())
+            # Thứ tự thủ công (kéo-thả): sort_order tăng dần, mới nhất làm phụ.
+            stmt = stmt.order_by(
+                Service.sort_order.asc(), Service.created_at.desc()
+            )
         stmt = stmt.offset(offset).limit(limit)
         result = await self.session.scalars(stmt)
         return result.all()
@@ -83,3 +86,18 @@ class ServiceRepository(BaseRepository[Service]):
             ),
         )
         return result.first()
+
+    async def next_sort_order(self) -> int:
+        current_max = await self.session.scalar(
+            select(func.max(Service.sort_order)).where(Service.deleted_at.is_(None))
+        )
+        return int(current_max) + 1 if current_max is not None else 0
+
+    async def list_by_ids(self, ids: Sequence[UUID]) -> list[Service]:
+        result = await self.session.scalars(
+            select(Service).where(
+                Service.id.in_(ids),
+                Service.deleted_at.is_(None),
+            )
+        )
+        return list(result.all())

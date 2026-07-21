@@ -1,8 +1,8 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Spin } from 'antd';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 
 export interface ColumnDef<T> {
   key: string;
@@ -26,6 +26,10 @@ interface AdminTableProps<T> {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   onSort?: (key: string, order: 'asc' | 'desc') => void;
+  /** Bật kéo-thả để sắp xếp lại thứ tự các hàng. */
+  draggable?: boolean;
+  /** Gọi khi thả xong, trả về danh sách rowKey theo thứ tự mới. */
+  onReorder?: (orderedKeys: string[]) => void;
 }
 
 function SortIcon({ active, direction }: { active: boolean; direction?: 'asc' | 'desc' }) {
@@ -49,8 +53,33 @@ export default function AdminTable<T>({
   sortBy,
   sortOrder = 'desc',
   onSort,
+  draggable = false,
+  onReorder,
 }: AdminTableProps<T>) {
-  const gridCols = columns.map(c => c.width ?? '1fr').join(' ');
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [overKey, setOverKey] = useState<string | null>(null);
+  const gridCols = (draggable ? '32px ' : '') + columns.map(c => c.width ?? '1fr').join(' ');
+
+  const handleDrop = (targetKey: string) => {
+    if (!dragKey || !onReorder || dragKey === targetKey) {
+      setDragKey(null);
+      setOverKey(null);
+      return;
+    }
+    const keys = data.map(rowKey);
+    const from = keys.indexOf(dragKey);
+    const to = keys.indexOf(targetKey);
+    if (from === -1 || to === -1) {
+      setDragKey(null);
+      setOverKey(null);
+      return;
+    }
+    keys.splice(from, 1);
+    keys.splice(to, 0, dragKey);
+    onReorder(keys);
+    setDragKey(null);
+    setOverKey(null);
+  };
 
   const handleHeaderClick = (col: ColumnDef<T>) => {
     if (!col.sortable || !onSort) return;
@@ -79,6 +108,7 @@ export default function AdminTable<T>({
               color: 'rgba(241,236,225,0.45)',
               fontWeight: 700,
             }}>
+              {draggable && <span />}
               {columns.map(col => (
                 <span
                   key={col.key}
@@ -100,10 +130,15 @@ export default function AdminTable<T>({
 
             {data.length === 0 ? (
               <div style={{ padding: 32, textAlign: 'center', color: '#64748b' }}>{emptyText}</div>
-            ) : data.map(row => (
+            ) : data.map(row => {
+              const key = rowKey(row);
+              const isOver = draggable && overKey === key && dragKey !== null && dragKey !== key;
+              return (
               <div
-                key={rowKey(row)}
+                key={key}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onDragOver={draggable ? e => { e.preventDefault(); if (overKey !== key) setOverKey(key); } : undefined}
+                onDrop={draggable ? e => { e.preventDefault(); handleDrop(key); } : undefined}
                 style={{
                   display: 'grid',
                   gridTemplateColumns: gridCols,
@@ -111,18 +146,34 @@ export default function AdminTable<T>({
                   padding: '14px 22px',
                   alignItems: 'center',
                   borderBottom: '1px solid rgba(238,138,51,0.07)',
+                  borderTop: isOver ? '2px solid #EE8A33' : '2px solid transparent',
                   cursor: onRowClick ? 'pointer' : undefined,
+                  opacity: draggable && dragKey === key ? 0.4 : 1,
+                  background: isOver ? 'rgba(238,138,51,0.06)' : undefined,
                 }}
                 onMouseEnter={onRowClick ? e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(238,138,51,0.05)'; } : undefined}
                 onMouseLeave={onRowClick ? e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; } : undefined}
               >
+                {draggable && (
+                  <span
+                    draggable
+                    onDragStart={() => setDragKey(key)}
+                    onDragEnd={() => { setDragKey(null); setOverKey(null); }}
+                    onClick={e => e.stopPropagation()}
+                    title="Kéo để sắp xếp"
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'grab', color: 'rgba(241,236,225,0.35)' }}
+                  >
+                    <GripVertical size={15} />
+                  </span>
+                )}
                 {columns.map(col => (
                   <div key={col.key} style={{ textAlign: col.align ?? 'left', minWidth: 0, overflow: 'hidden' }}>
                     {col.render(row)}
                   </div>
                 ))}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

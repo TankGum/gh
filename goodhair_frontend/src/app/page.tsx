@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLang } from '@/hooks/useLang';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Playfair_Display, Hanken_Grotesk } from 'next/font/google';
 import {
   fetchPublicServices,
@@ -90,6 +91,155 @@ const serviceDemoImage = (name: string, description: string | null) => {
   if (/cắt|\bcut\b/.test(s)) return '/service_demo/cut.jpg';
   return '/service_demo/default.jpg';
 };
+
+// Nút CTA dạng "vuốt để đặt lịch": phải kéo nút tròn (mũi tên) từ đầu đến cuối
+// thanh trượt thì mới điều hướng — bấm/nhả giữa chừng sẽ tự trượt về lại vị trí đầu.
+function SwipeToBookCTA({ href, label }: { href: string; label: string }) {
+  const router = useRouter();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const drag = useRef({ down: false, startX: 0 });
+  const [trackWidth, setTrackWidth] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [completed, setCompleted] = useState(false);
+
+  const THUMB = 42;
+  const PAD = 8;
+  const limit = Math.max(trackWidth - THUMB - PAD * 2, 0);
+
+  // Đo bề rộng thanh trượt (đổi khi resize) để tính giới hạn kéo — đọc ref
+  // trong effect, không phải lúc render.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const update = () => setTrackWidth(el.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const onPointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (completed) return;
+    drag.current = { down: true, startX: e.clientX - dragX };
+    setDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!drag.current.down || completed) return;
+    setDragX(Math.min(Math.max(e.clientX - drag.current.startX, 0), limit));
+  };
+
+  const finishDrag = () => {
+    if (!drag.current.down) return;
+    drag.current.down = false;
+    setDragging(false);
+    if (limit > 0 && dragX >= limit * 0.82) {
+      setDragX(limit);
+      setCompleted(true);
+      window.setTimeout(() => router.push(href), 240);
+    } else {
+      setDragX(0);
+    }
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (completed) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setCompleted(true);
+      router.push(href);
+    }
+  };
+
+  const progress = limit > 0 ? dragX / limit : 0;
+
+  return (
+    <div
+      ref={trackRef}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      onKeyDown={onKeyDown}
+      className="ghx-cta"
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        width: 300,
+        maxWidth: '100%',
+        height: THUMB + PAD * 2,
+        background: '#EE8A33',
+        borderRadius: 999,
+        padding: PAD,
+        boxSizing: 'border-box',
+        boxShadow: '0 12px 34px rgba(238,138,51,.35)',
+        overflow: 'hidden',
+        userSelect: 'none',
+        transition: 'filter .2s ease, box-shadow .2s ease',
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: THUMB + PAD + 14,
+          right: 16,
+          top: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          color: '#0B1620',
+          fontSize: 12.5,
+          fontWeight: 800,
+          letterSpacing: '.14em',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          opacity: Math.max(1 - progress * 1.8, 0),
+          transition: dragging ? 'none' : 'opacity .25s ease',
+          pointerEvents: 'none',
+        }}
+      >
+        {label}
+      </span>
+      <span
+        className="ghx-cta-arrow"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={finishDrag}
+        onPointerCancel={finishDrag}
+        style={{
+          position: 'relative',
+          zIndex: 1,
+          width: THUMB,
+          height: THUMB,
+          borderRadius: '50%',
+          background: '#0B1620',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          transform: `translateX(${dragX}px)`,
+          transition: dragging ? 'none' : 'transform .3s cubic-bezier(.22,.61,.36,1)',
+          cursor: completed ? 'default' : 'grab',
+          touchAction: 'none',
+        }}
+      >
+        <span
+          className={!dragging && !completed ? 'ghx-cta-hint' : undefined}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EE8A33" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+          </svg>
+        </span>
+      </span>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const { lang, setLang } = useLang();
@@ -628,22 +778,25 @@ export default function HomePage() {
             {active.desc}
           </p>
           {(active.priceTag || active.durationTag) && (
-            <div className="ghx-a3" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 24 }}>
+            <div className="ghx-a3" style={{ display: 'inline-flex', alignItems: 'center', gap: 16, marginTop: 24, background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.16)', borderRadius: 14, padding: '13px 22px', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
               {active.priceTag && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(238,138,51,.16)', border: '1px solid rgba(238,138,51,.55)', color: '#FFB36B', borderRadius: 12, padding: '11px 18px', fontSize: 16, fontWeight: 800, letterSpacing: '.02em' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EE8A33" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
                     <line x1="7" y1="7" x2="7.01" y2="7"/>
                   </svg>
-                  {active.priceTag}
+                  <span style={{ color: '#FFB36B', fontSize: 16, fontWeight: 800, letterSpacing: '.02em' }}>{active.priceTag}</span>
                 </span>
               )}
+              {active.priceTag && active.durationTag && (
+                <span style={{ width: 1, height: 18, background: 'rgba(255,255,255,.2)', flexShrink: 0 }} />
+              )}
               {active.durationTag && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.28)', color: 'rgba(255,255,255,.92)', borderRadius: 12, padding: '11px 18px', fontSize: 14.5, fontWeight: 700, letterSpacing: '.02em', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                     <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
                   </svg>
-                  {active.durationTag}
+                  <span style={{ color: 'rgba(255,255,255,.85)', fontSize: 14.5, fontWeight: 700, letterSpacing: '.02em' }}>{active.durationTag}</span>
                 </span>
               )}
             </div>
@@ -679,16 +832,7 @@ export default function HomePage() {
             </div>
           )}
           <div className="ghx-a4" style={{ marginTop: 34 }}>
-            <Link href={active.href} className="ghx-cta" style={{ display: 'inline-flex', alignItems: 'center', gap: 14, textDecoration: 'none', background: '#EE8A33', borderRadius: 999, padding: '8px 28px 8px 8px', boxShadow: '0 12px 34px rgba(238,138,51,.35)', transition: 'transform .28s cubic-bezier(.22,.61,.36,1), box-shadow .28s ease, background .2s ease' }}>
-              <span className="ghx-cta-arrow" style={{ width: 42, height: 42, borderRadius: '50%', background: '#0B1620', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'transform .28s cubic-bezier(.22,.61,.36,1)' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EE8A33" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </span>
-              <span style={{ color: '#0B1620', fontSize: 12.5, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                {active.cta}
-              </span>
-            </Link>
+            <SwipeToBookCTA key={active.href} href={active.href} label={active.cta} />
           </div>
           {active.meta && (
             <div className="ghx-a4 ghx-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 42, fontSize: 12, letterSpacing: '.16em', color: 'rgba(255,255,255,.55)' }}>
@@ -912,9 +1056,9 @@ export default function HomePage() {
         .ghx-ctl:hover { background: rgba(255,255,255,.16) !important; border-color: #fff !important; }
         .ghx-contact-chip:hover { background: rgba(238,138,51,.16) !important; border-color: rgba(238,138,51,.6) !important; color: #FFB36B !important; }
         .ghx-soc:hover { background: rgba(238,138,51,.15) !important; border-color: #EE8A33 !important; color: #EE8A33 !important; }
-        .ghx-cta:hover { transform: translateY(-3px); box-shadow: 0 18px 44px rgba(238,138,51,.5) !important; background: #F59E42 !important; }
-        .ghx-cta:hover .ghx-cta-arrow { transform: translateX(4px) rotate(-45deg); }
-        .ghx-cta:active { transform: translateY(-1px) scale(.98); }
+        .ghx-cta:hover { filter: brightness(1.12); box-shadow: 0 14px 38px rgba(238,138,51,.55) !important; }
+        @keyframes ghCtaHint { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+        .ghx-cta-hint { animation: ghCtaHint 1.6s ease-in-out infinite; }
         .ghx-pill::-webkit-scrollbar { display: none; }
         .ghx-rail { cursor: grab; }
         .ghx-rail:active { cursor: grabbing; }

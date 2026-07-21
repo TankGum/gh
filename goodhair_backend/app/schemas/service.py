@@ -15,6 +15,7 @@ class ServiceBase(AppSchema):
     price: int = Field(ge=0)
     status: ServiceStatus = ServiceStatus.ACTIVE
     is_all_branches: bool = True
+    is_featured: bool = False
 
 
 class ServiceCreate(ServiceBase):
@@ -35,16 +36,22 @@ class ServiceUpdate(AppSchema):
     price: int | None = Field(default=None, ge=0)
     status: ServiceStatus | None = None
     is_all_branches: bool | None = None
+    is_featured: bool | None = None
     branch_ids: list[UUID] | None = None
 
 
 class ServiceRead(ServiceBase):
     id: UUID
+    sort_order: int
     branch_ids: list[UUID] = Field(default_factory=list)
     branch_count: int
     total_branches: int
     created_at: datetime
     updated_at: datetime
+
+
+class ServiceReorder(AppSchema):
+    ids: list[UUID] = Field(min_length=1)
 
 
 class ServiceImageUploadResult(AppSchema):

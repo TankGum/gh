@@ -4,11 +4,11 @@ import { useState, useCallback, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { Select, App, Pagination } from 'antd';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
-import { Plus, Pencil, Trash2, Upload, Scissors } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, Scissors, Star } from 'lucide-react';
 import FilterBar from '@/components/ui/FilterBar';
 import Modal from '@/components/ui/Modal';
 import { HairService, ServiceCreatePayload, ServiceUpdatePayload, ServiceStatus } from '@/types/service.type';
-import { createService, fetchServices, updateService, deleteService, uploadServiceImage } from '@/services/services.api';
+import { createService, fetchServices, updateService, deleteService, uploadServiceImage, reorderServices } from '@/services/services.api';
 import { fetchBranches, type Branch } from '@/services/branches.api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -75,20 +75,29 @@ export default function ServiceClient() {
   const [formDuration, setFormDuration] = useState(30);
   const [formPrice, setFormPrice] = useState(0);
   const [formIsActive, setFormIsActive] = useState(true);
+  const [formIsFeatured, setFormIsFeatured] = useState(false);
   const [formIsAllBranches, setFormIsAllBranches] = useState(true);
   const [formBranchIds, setFormBranchIds] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const [deletingService, setDeletingService] = useState<HairService | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
 
+  // Chế độ thứ tự thủ công (mặc định, chưa sort theo cột): tải tối đa 100 dịch
+  // vụ để kéo-thả sắp xếp toàn danh sách, ẩn phân trang.
+  const manualOrder = !sortBy;
+  const dragEnabled = manualOrder && !query && canEdit;
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchServices({ q: query || undefined, page, size: pageSize, sortBy, sortOrder });
+      const data = manualOrder
+        ? await fetchServices({ q: query || undefined, page: 1, size: 100 })
+        : await fetchServices({ q: query || undefined, page, size: pageSize, sortBy, sortOrder });
       setServices(data.items);
       setTotal(data.total);
     } catch {
@@ -96,7 +105,32 @@ export default function ServiceClient() {
     } finally {
       setLoading(false);
     }
-  }, [query, page, pageSize, sortBy, sortOrder]);
+  }, [query, page, pageSize, sortBy, sortOrder, manualOrder]);
+
+  const handleReorder = async (orderedIds: string[]) => {
+    const prev = services;
+    const byId = new Map(services.map(s => [s.id, s]));
+    const reordered = orderedIds.map(id => byId.get(id)).filter((s): s is HairService => !!s);
+    setServices(reordered);
+    try {
+      await reorderServices(orderedIds);
+    } catch {
+      setServices(prev);
+      message.error('Sắp xếp lại thất bại');
+    }
+  };
+
+  const handleToggleFeatured = async (svc: HairService) => {
+    setTogglingId(svc.id);
+    try {
+      await updateService(svc.id, { isFeatured: !svc.isFeatured });
+      setServices(list => list.map(s => (s.id === svc.id ? { ...s, isFeatured: !s.isFeatured } : s)));
+    } catch {
+      message.error('Cập nhật phổ biến thất bại');
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   useEffect(() => {
     refresh();
@@ -133,6 +167,7 @@ export default function ServiceClient() {
     setFormDuration(30);
     setFormPrice(0);
     setFormIsActive(true);
+    setFormIsFeatured(false);
     setFormIsAllBranches(true);
     setFormBranchIds([]);
     setFormErrors({});
@@ -148,6 +183,7 @@ export default function ServiceClient() {
     setFormDuration(svc.durationMinutes);
     setFormPrice(svc.price);
     setFormIsActive(svc.status === 'active');
+    setFormIsFeatured(svc.isFeatured);
     setFormIsAllBranches(svc.isAllBranches);
     setFormBranchIds(svc.branchIds ?? []);
     setFormErrors({});
@@ -175,6 +211,7 @@ export default function ServiceClient() {
         if (formDuration !== editingService.durationMinutes) payload.durationMinutes = formDuration;
         if (formPrice !== editingService.price) payload.price = formPrice;
         if (status !== editingService.status) payload.status = status;
+        if (formIsFeatured !== editingService.isFeatured) payload.isFeatured = formIsFeatured;
         if (formIsAllBranches !== editingService.isAllBranches) payload.isAllBranches = formIsAllBranches;
         if (!formIsAllBranches && formBranchIds.length) payload.branchIds = formBranchIds;
         await updateService(editingService.id, payload);
@@ -187,6 +224,7 @@ export default function ServiceClient() {
           durationMinutes: formDuration,
           price: formPrice,
           status,
+          isFeatured: formIsFeatured,
           isAllBranches: formIsAllBranches,
           branchIds: formIsAllBranches ? undefined : formBranchIds,
         };
@@ -242,6 +280,7 @@ export default function ServiceClient() {
             )}
           </div>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: '#F1ECE1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svc.name}</span>
+          {svc.isFeatured && <Star size={13} fill="#EE8A33" color="#EE8A33" style={{ flexShrink: 0 }} />}
         </div>
       ),
     },
@@ -275,6 +314,22 @@ export default function ServiceClient() {
         <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: svc.isAllBranches ? 'rgba(63,191,127,0.15)' : 'rgba(238,138,51,0.15)', color: svc.isAllBranches ? '#5FD49A' : '#EE8A33' }}>
           {svc.isAllBranches ? 'Tất cả cửa hàng' : `${svc.branchCount}/${svc.totalBranches} cửa hàng`}
         </span>
+      ),
+    },
+    {
+      key: 'featured',
+      header: 'Phổ biến',
+      width: '90px',
+      align: 'center',
+      render: svc => (
+        <button
+          onClick={() => canEdit && handleToggleFeatured(svc)}
+          disabled={!canEdit || togglingId === svc.id}
+          title={svc.isFeatured ? 'Bỏ đánh dấu phổ biến' : 'Đánh dấu phổ biến'}
+          style={{ background: 'none', border: 'none', cursor: canEdit ? 'pointer' : 'default', padding: 4, display: 'inline-flex', opacity: togglingId === svc.id ? 0.5 : 1 }}
+        >
+          <Star size={16} fill={svc.isFeatured ? '#EE8A33' : 'none'} color={svc.isFeatured ? '#EE8A33' : 'rgba(241,236,225,0.3)'} />
+        </button>
       ),
     },
     {
@@ -331,7 +386,23 @@ export default function ServiceClient() {
       </div>
 
       {/* Search */}
-      <FilterBar onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Tìm dịch vụ" marginBottom={24} />
+      <FilterBar onSearch={(v) => { setQuery(v); setPage(1); }} placeholder="Tìm dịch vụ" marginBottom={dragEnabled ? 12 : 24} />
+
+      {dragEnabled && (
+        <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'rgba(241,236,225,.45)' }}>
+          Kéo biểu tượng ⣿ để sắp xếp thứ tự hiển thị dịch vụ cho khách. Bấm ngôi sao để đánh dấu dịch vụ phổ biến.
+        </p>
+      )}
+      {!manualOrder && (
+        <div style={{ margin: '0 0 16px' }}>
+          <button
+            onClick={() => { setSortBy(undefined); setPage(1); }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: '#EE8A33', padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+          >
+            ↕ Về thứ tự thủ công (kéo-thả)
+          </button>
+        </div>
+      )}
 
       {error && (
         <div style={{ marginBottom: 16, padding: '8px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, color: '#f87171', fontSize: 14 }}>
@@ -348,9 +419,12 @@ export default function ServiceClient() {
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSort={handleSort}
+        draggable={dragEnabled}
+        onReorder={handleReorder}
         emptyText="Chưa có dịch vụ nào."
-        minWidth={860}
+        minWidth={1000}
         pagination={
+          manualOrder ? undefined : (
           <Pagination
             current={page}
             pageSize={pageSize}
@@ -360,6 +434,7 @@ export default function ServiceClient() {
             showTotal={(t, [s, e]) => `${s}–${e} / ${t} dịch vụ`}
             onChange={(p, ps) => { setPageSize(ps); setPage(ps !== pageSize ? 1 : p); }}
           />
+          )
         }
       />
 
@@ -458,6 +533,20 @@ export default function ServiceClient() {
               </button>
               <span style={{ fontSize: 13, color: 'rgba(241,236,225,.8)', fontWeight: 600 }}>
                 {formIsActive ? 'Đang bán' : 'Tạm ẩn'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button
+                type="button"
+                onClick={() => setFormIsFeatured(v => !v)}
+                style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: formIsFeatured ? '#EE8A33' : 'rgba(241,236,225,.15)', position: 'relative', flexShrink: 0, transition: 'background .2s' }}
+              >
+                <span style={{ position: 'absolute', top: 3, left: formIsFeatured ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
+              </button>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(241,236,225,.8)', fontWeight: 600 }}>
+                <Star size={14} fill={formIsFeatured ? '#EE8A33' : 'none'} color={formIsFeatured ? '#EE8A33' : 'rgba(241,236,225,0.5)'} />
+                Dịch vụ phổ biến
               </span>
             </div>
 

@@ -56,6 +56,8 @@ class Service(
         server_default=ServiceStatus.ACTIVE.value,
     )
     is_all_branches: Mapped[bool] = mapped_column(default=True)
+    is_featured: Mapped[bool] = mapped_column(default=False, server_default="false")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     branches: Mapped[list[Branch]] = relationship(
         secondary=service_branches,

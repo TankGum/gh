@@ -36,6 +36,7 @@ class PublicServiceRead(AppSchema):
     duration_minutes: int
     price: int
     is_all_branches: bool = True
+    is_featured: bool = False
     branch_ids: list[UUID] = []
 
 

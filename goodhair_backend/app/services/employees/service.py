@@ -62,16 +62,13 @@ class EmployeeService:
         current_account_id: UUID,
     ) -> Employee:
         employee = await self._get_or_404(employee_id)
+        await self._guard_admin_protected(employee)
         payload = {}
         for k, v in data.model_dump(exclude_unset=True).items():
             if v is not None or k == "avatar_url":
                 payload[k] = v
         if not payload:
             return employee
-        if "role_id" in payload:
-            await self._guard_self_admin_role_change(
-                employee, payload["role_id"], current_account_id
-            )
         old_avatar_url = employee.avatar_url if "avatar_url" in payload else None
         changes = await self._build_changes(employee, payload)
         await self.repo.update(employee, payload)
@@ -137,27 +134,21 @@ class EmployeeService:
         branch = await self.branch_repo.get_by_id(branch_id)
         return branch.name if branch else "∅"
 
-    async def _guard_self_admin_role_change(
-        self,
-        employee: Employee,
-        new_role_id: UUID | None,
-        current_account_id: UUID,
-    ) -> None:
-        """Admin không được tự đổi role của chính mình sang role khác."""
-        if employee.account_id != current_account_id:
-            return
-        if new_role_id == employee.role_id:
-            return
+    async def _guard_admin_protected(self, employee: Employee) -> None:
+        """Không cho phép sửa/xoá nhân viên mang role quản trị viên (system)."""
         if employee.role_id is None:
             return
-        current_role = await self.role_repo.get_by_id(employee.role_id)
-        if current_role is not None and current_role.is_system:
+        role = await self.role_repo.get_by_id(employee.role_id)
+        if role is not None and role.is_system:
             raise ForbiddenError(
-                message_key="errors.employee.cannot_change_own_admin_role"
+                detail={
+                    "message": "Không thể chỉnh sửa hoặc xoá tài khoản quản trị viên"
+                },
             )
 
     async def delete(self, employee_id: UUID) -> None:
         employee = await self._get_or_404(employee_id)
+        await self._guard_admin_protected(employee)
         avatar_url = employee.avatar_url
         await self.repo.soft_delete(employee)
         account = await self.account_repo.get_by_id(employee.account_id)

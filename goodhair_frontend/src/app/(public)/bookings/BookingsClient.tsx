@@ -472,10 +472,15 @@ export default function BookingsClient() {
                   : services.map(sv => {
                   const sel = serviceIds.includes(sv.id);
                   return (
-                    <button key={sv.id} onClick={() => setServiceIds(sel ? serviceIds.filter(x => x !== sv.id) : [...serviceIds, sv.id])} style={{ textAlign: 'left', cursor: 'pointer', padding: '18px 20px', borderRadius: 4, fontFamily: hanken.style.fontFamily, display: 'flex', alignItems: 'center', gap: 16, width: '100%', border: sel ? `1px solid ${styles.accent}` : '1px solid rgba(238,138,51,.16)', background: sel ? styles.selectedBg : styles.cardBg }}>
+                    <button key={sv.id} onClick={() => setServiceIds(sel ? serviceIds.filter(x => x !== sv.id) : [...serviceIds, sv.id])} style={{ textAlign: 'left', cursor: 'pointer', padding: '18px 20px', borderRadius: 4, fontFamily: hanken.style.fontFamily, display: 'flex', alignItems: 'center', gap: 16, width: '100%', border: sel ? `1px solid ${styles.accent}` : sv.isFeatured ? '1px solid rgba(238,138,51,.45)' : '1px solid rgba(238,138,51,.16)', background: sel ? styles.selectedBg : sv.isFeatured ? 'rgba(238,138,51,.06)' : styles.cardBg, boxShadow: sv.isFeatured && !sel ? '0 0 0 1px rgba(238,138,51,.12)' : undefined }}>
                       <span style={{ width: 24, height: 24, borderRadius: 5, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, ...(sel ? { background: styles.accent, color: '#0B1620' } : { border: '1px solid rgba(238,138,51,.3)' }) }}>{sel ? '✓' : ''}</span>
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 700, color: styles.text, margin: 0 }}>{sv.name}</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <h3 style={{ fontSize: 16, fontWeight: 700, color: styles.text, margin: 0 }}>{sv.name}</h3>
+                          {sv.isFeatured && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', color: styles.accent, background: 'rgba(238,138,51,.14)', padding: '2px 7px', borderRadius: 20 }}>★ {t('Phổ biến', 'Popular')}</span>
+                          )}
+                        </div>
                         <p style={{ fontSize: 12.5, color: 'rgba(241,236,225,.5)', marginTop: 3 }}>{sv.description}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>

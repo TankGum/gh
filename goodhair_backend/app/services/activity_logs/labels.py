@@ -19,6 +19,7 @@ SERVICE_LABELS = {
     "price": "Giá",
     "status": "Trạng thái bán",
     "is_all_branches": "Áp dụng mọi chi nhánh",
+    "is_featured": "Nổi bật",
 }
 
 BOOKING_LABELS = {

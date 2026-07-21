@@ -9,6 +9,8 @@ export interface HairService {
   price: number;
   status: ServiceStatus;
   isAllBranches: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
   branchIds: string[];
   branchCount: number;
   totalBranches: number;
@@ -24,6 +26,7 @@ export interface ServiceCreatePayload {
   price: number;
   status?: ServiceStatus;
   isAllBranches?: boolean;
+  isFeatured?: boolean;
   branchIds?: string[];
 }
 
@@ -35,6 +38,7 @@ export interface ServiceUpdatePayload {
   price?: number;
   status?: ServiceStatus;
   isAllBranches?: boolean;
+  isFeatured?: boolean;
   branchIds?: string[];
 }
 

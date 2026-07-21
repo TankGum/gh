@@ -68,6 +68,8 @@ class ServiceCatalogService:
             price=payload.price,
             status=payload.status,
             is_all_branches=payload.is_all_branches,
+            is_featured=payload.is_featured,
+            sort_order=await self.service_repository.next_sort_order(),
         )
         service.branches = list(branches)
         self.session.add(service)
@@ -138,6 +140,18 @@ class ServiceCatalogService:
         total_branches = await self.branch_repository.count_active()
         return self._to_read(service, total_branches)
 
+    async def reorder_services(self, ordered_ids: list[UUID]) -> None:
+        services = await self.service_repository.list_by_ids(ordered_ids)
+        by_id = {service.id: service for service in services}
+        missing = [sid for sid in ordered_ids if sid not in by_id]
+        if missing:
+            raise NotFoundError(
+                detail={"resource": "service", "id": str(missing[0])},
+            )
+        for index, service_id in enumerate(ordered_ids):
+            by_id[service_id].sort_order = index
+        await self.session.flush()
+
     async def delete_service(self, service_id: UUID) -> None:
         service = await self._get_or_404(service_id)
         image_url = service.image_url
@@ -203,6 +217,8 @@ class ServiceCatalogService:
             price=service.price,
             status=service.status,
             is_all_branches=service.is_all_branches,
+            is_featured=service.is_featured,
+            sort_order=service.sort_order,
             branch_ids=branch_ids,
             branch_count=branch_count,
             total_branches=total_branches,
