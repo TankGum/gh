@@ -22,6 +22,5 @@ export interface ActivityLogListItem {
 // Bản ghi chi tiết (gọi khi bấm xem chi tiết).
 export interface ActivityLogDetail extends ActivityLogListItem {
   entityId: string | null;
-  ipAddress: string | null;
   changes: ActivityChange[];
 }

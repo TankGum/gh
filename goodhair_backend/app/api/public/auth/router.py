@@ -1,7 +1,7 @@
 from typing import cast
 from uuid import UUID
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response
+from fastapi import APIRouter, Cookie, Depends, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,14 +61,10 @@ class GoogleLoginRequest(BaseModel):
 @router.post("/google", response_model=AccountRead)
 async def login_google(
     payload: GoogleLoginRequest,
-    request: Request,
     response: Response,
     service: AuthService = Depends(get_auth_service),
 ) -> AccountRead:
-    client_ip = request.client.host if request.client else None
-    account, access_token, raw_refresh = await service.login_with_google(
-        payload.id_token, ip_address=client_ip
-    )
+    account, access_token, raw_refresh = await service.login_with_google(payload.id_token)
     _set_auth_cookies(response, access_token, raw_refresh)
     return AccountRead.model_validate(account)
 

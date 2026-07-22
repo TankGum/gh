@@ -53,7 +53,6 @@ const ACTION_OPTIONS = [
   { value: 'create', label: 'Tạo mới' },
   { value: 'update', label: 'Cập nhật' },
   { value: 'delete', label: 'Xoá' },
-  { value: 'login', label: 'Đăng nhập' },
 ];
 
 const MODULE_OPTIONS = [
@@ -259,7 +258,6 @@ export default function AuditLogClient() {
                     </div>
                     <Field label="Module" value={moduleLabel(detail.module)} />
                     <Field label="Đối tượng" value={detail.targetLabel} />
-                    {detail.ipAddress && <Field label="IP" value={detail.ipAddress} />}
                   </div>
                   <FieldLabel>Chi tiết thay đổi (cũ → mới)</FieldLabel>
                   {detail.changes.length > 0 ? (

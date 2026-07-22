@@ -24,7 +24,6 @@ class ActivityLogRead(ActivityLogListItem):
     """Bản ghi chi tiết — kèm diff (gọi khi bấm xem chi tiết)."""
 
     entity_id: UUID | None = None
-    ip_address: str | None = None
     # Mỗi phần tử là {"label": str, "from": str, "to": str}.
     changes: list[dict[str, Any]] = []
 

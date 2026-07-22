@@ -11,7 +11,8 @@ import { fetchEmployees } from '@/services/employees.api';
 import { fetchBranches } from '@/services/branches.api';
 import { fetchServices } from '@/services/services.api';
 import { fetchShifts } from '@/services/shifts.api';
-import { Printer } from 'lucide-react';
+import { fetchRoles } from '@/services/roles.api';
+import { Printer, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBadge } from '@/contexts/BadgeContext';
 import Modal from '@/components/ui/Modal';
@@ -24,6 +25,7 @@ import type { Employee } from '@/types/employee.type';
 import type { Branch } from '@/types/branch.type';
 import type { HairService } from '@/types/service.type';
 import type { EmployeeShift, ShiftType } from '@/types/shift.type';
+import type { Role } from '@/types/role.type';
 
 const STATUS_META: Record<BookingStatus, { label: string; dot: string }> = {
   pending: { label: 'Chờ xác nhận', dot: '#D9BE84' },
@@ -64,9 +66,50 @@ function formatShort(value: number): string {
   return new Intl.NumberFormat('vi-VN').format(value) + ' VND';
 }
 
+// Đường kẻ "hiện tại" — tách riêng để tự cập nhật mỗi phút mà KHÔNG làm cả
+// bảng lịch (hàng chục barber × slot) re-render theo; chỉ component nhỏ
+// này tick lại. Ẩn hẳn (return null) nếu không xem đúng ngày hôm nay hoặc
+// ngoài khung giờ hiển thị.
+function NowLine({
+  selectedDate,
+  gridMin,
+  closeMin,
+  pxPerMin,
+}: {
+  selectedDate: string;
+  gridMin: number;
+  closeMin: number;
+  pxPerMin: number;
+}) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  if (selectedDate !== toISODate(now) || nowMin < gridMin || nowMin > closeMin) return null;
+
+  const top = (nowMin - gridMin) * pxPerMin;
+  const label = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+
+  return (
+    <div style={{ position: 'absolute', left: 0, right: 0, top, zIndex: 3, pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+      {/* Nhãn giờ + chấm đỏ dính theo cột giờ (sticky) khi cuộn ngang, để
+          không bị "tuột" khỏi cột giờ trong lúc đường kẻ vẫn kéo dài hết bảng. */}
+      <span style={{ width: 58, flexShrink: 0, position: 'sticky', left: 0, textAlign: 'right', paddingRight: 8, fontSize: 10, fontWeight: 700, color: '#EF4444', fontVariantNumeric: 'tabular-nums', background: '#0F1E2B' }}>
+        {label}
+      </span>
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#EF4444', flexShrink: 0, position: 'sticky', left: 54.5 }} />
+      <div style={{ flex: 1, height: 2, background: '#EF4444' }} />
+    </div>
+  );
+}
+
 export default function ManageBookingsClient() {
   const { message } = App.useApp();
-  const { can } = useAuth();
+  const { can, account } = useAuth();
   const { refreshBadges } = useBadge();
   const canCreate = can('bookings', 'create');
   const canEdit = can('bookings', 'edit');
@@ -83,6 +126,7 @@ export default function ManageBookingsClient() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [services, setServices] = useState<HairService[]>([]);
   const [shifts, setShifts] = useState<EmployeeShift[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [modalMode, setModalMode] = useState<'add' | 'edit' | null>(null);
@@ -94,20 +138,30 @@ export default function ManageBookingsClient() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [tooltipData, setTooltipData] = useState<{ b: Booking; timeRange: string; svcNames: string; x: number; y: number } | null>(null);
   const [printerModalOpen, setPrinterModalOpen] = useState(false);
+  const [otherScheduleWarning, setOtherScheduleWarning] = useState(false);
 
   const todayDate = new Date();
   const weekDates = Array.from({ length: 61 }, (_, i) => addDays(toISODate(new Date(todayDate.getTime() - 30 * 86400000)), i));
 
-  // Filter barbers (employees with role name "barber")
+  // Chỉ hiển thị nhân viên có role được phép đặt lịch (isBookable) và
+  // không phải role quản trị viên (isSystem) trên bảng đặt lịch.
   const barbers = useMemo(() => {
-    return employees;
-  }, [employees]);
+    const bookableRoleIds = new Set(roles.filter(r => r.isBookable && !r.isSystem).map(r => r.id));
+    return employees.filter(e => e.roleId && bookableRoleIds.has(e.roleId));
+  }, [employees, roles]);
 
   const filteredBarbers = useMemo(() => {
     let list = branchFilter === 'all' ? barbers : barbers.filter(e => e.branchId === branchFilter);
     if (search.trim()) list = list.filter(e => e.name.toLowerCase().includes(search.toLowerCase()));
     return list;
   }, [barbers, branchFilter, search]);
+
+  // Nhân viên (nếu có) ứng với tài khoản đang đăng nhập — dùng để phân biệt
+  // "lịch của mình" khi cảnh báo có người khác vừa cập nhật 1 booking.
+  const myEmployeeId = useMemo(
+    () => employees.find(e => e.accountId === account?.id)?.id ?? null,
+    [employees, account],
+  );
 
   // Build hours range from branches
   const hoursRange = useMemo(() => {
@@ -143,18 +197,20 @@ export default function ManageBookingsClient() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [bookingData, empData, branchData, svcData, shiftData] = await Promise.all([
+      const [bookingData, empData, branchData, svcData, shiftData, roleData] = await Promise.all([
         fetchBookings({ date: selectedDate, size: 100 }),
         fetchEmployees({ size: 100 }),
         fetchBranches({ size: 100 }).catch(() => ({ items: [] as Branch[], total: 0, page: 1, size: 100 })),
         fetchServices({ size: 100 }).catch(() => ({ items: [] as HairService[], total: 0, page: 1, size: 100 })),
         fetchShifts({ startDate: selectedDate, endDate: selectedDate }).catch(() => [] as EmployeeShift[]),
+        fetchRoles({ size: 100 }).catch(() => ({ items: [] as Role[], total: 0, page: 1, size: 100 })),
       ]);
       setBookings(bookingData.items);
       setEmployees(empData.items);
       setBranches(branchData.items);
       setServices(svcData.items);
       setShifts(shiftData);
+      setRoles(roleData.items);
     } catch {
       setBookings([]);
     } finally {
@@ -260,6 +316,16 @@ export default function ManageBookingsClient() {
     }
   };
 
+  // Bấm "Lưu" khi sửa 1 booking không thuộc lịch của chính mình (employeeId
+  // khác với nhân viên ứng với tài khoản đang đăng nhập) thì cảnh báo trước.
+  const attemptSave = () => {
+    if (modalMode === 'edit' && myEmployeeId && modalData?.employeeId && modalData.employeeId !== myEmployeeId) {
+      setOtherScheduleWarning(true);
+      return;
+    }
+    void handleSave();
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setSubmitting(true);
@@ -292,7 +358,7 @@ export default function ManageBookingsClient() {
   const barberOpts = filteredBarbers.map(e => ({ value: e.id, label: e.name }));
   // When branch changes in modal, filter barbers
   const modalBarberOpts = modalData?.branchId
-    ? employees.filter(e => e.branchId === modalData.branchId).map(e => ({ value: e.id, label: e.name }))
+    ? barbers.filter(e => e.branchId === modalData.branchId).map(e => ({ value: e.id, label: e.name }))
     : barberOpts;
 
   const serviceOpts = services.map(s => ({ value: s.id, label: `${s.name} (${formatShort(s.price)})` }));
@@ -365,27 +431,37 @@ export default function ManageBookingsClient() {
     return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Page header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 24, borderBottom: '1px solid #1e293b', paddingBottom: 16 }}>
+        <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4 }}>Đặt lịch</h1>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>{bookings.length} lịch hẹn hôm nay</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', flexWrap: 'nowrap', gap: isMobile ? 8 : 10, flexShrink: 0 }}>
+          <button
+            onClick={() => refresh()}
+            disabled={loading}
+            title="Tải lại dữ liệu mới nhất"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: isMobile ? '10px' : '10px 16px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1 }}
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : undefined} />
+            {!isMobile && 'Làm mới'}
+          </button>
           <button
             onClick={() => setPrinterModalOpen(true)}
             title="Cấu hình máy in hoá đơn"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: '10px 16px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: isMobile ? '10px' : '10px 16px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
             <Printer size={15} />
-            Máy in
+            {!isMobile && 'Cấu hình máy in'}
           </button>
           {canCreate && (
             <button
               onClick={() => openAdd()}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#EE8A33', border: 'none', color: '#0B1620', padding: '10px 20px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+              title="Tạo lịch hẹn"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#EE8A33', border: 'none', color: '#0B1620', padding: isMobile ? '10px' : '10px 20px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14"/></svg>
-              Tạo lịch hẹn
+              {!isMobile && 'Tạo lịch hẹn'}
             </button>
           )}
         </div>
@@ -425,7 +501,7 @@ export default function ManageBookingsClient() {
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 760 }}>
               {/* Sticky header row */}
               <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 2, borderBottom: '1px solid rgba(238,138,51,.14)', background: '#0F1E2B' }}>
-                <div style={{ width: 58, flexShrink: 0, background: '#0F1E2B' }} />
+                <div style={{ width: 58, flexShrink: 0, position: 'sticky', left: 0, zIndex: 1, background: '#0F1E2B' }} />
                 {filteredBarbers.map(emp => {
                   const branch = branchMap.get(emp.branchId || '');
                   const empBookings = bookingsByEmployee.get(emp.id) || [];
@@ -450,8 +526,9 @@ export default function ManageBookingsClient() {
                 })}
               </div>
               {/* Time slots body — scrolls vertically under sticky header */}
-              <div style={{ display: 'flex' }}>
-                <div style={{ width: 58, flexShrink: 0, borderRight: '1px solid rgba(238,138,51,.1)' }}>
+              <div style={{ display: 'flex', position: 'relative' }}>
+                <NowLine selectedDate={selectedDate} gridMin={hoursRange.gridMin} closeMin={hoursRange.closeMin} pxPerMin={hoursRange.pxPerMin} />
+                <div style={{ width: 58, flexShrink: 0, position: 'sticky', left: 0, zIndex: 2, background: '#0F1E2B', borderRight: '1px solid rgba(238,138,51,.1)' }}>
                   {hoursRange.slots.map(s => {
                     const isWhole = s === Math.floor(s);
                     const mm = isWhole ? '00' : '30';
@@ -716,7 +793,7 @@ export default function ManageBookingsClient() {
                 Huỷ
               </button>
               <button
-                onClick={handleSave}
+                onClick={attemptSave}
                 disabled={submitting}
                 style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.5 : 1, transition: 'opacity .15s' }}
               >
@@ -749,6 +826,19 @@ export default function ManageBookingsClient() {
       </Modal>
 
       <PrinterPickerModal open={printerModalOpen} onClose={() => setPrinterModalOpen(false)} />
+
+      {/* Cảnh báo: đang sửa 1 booking KHÔNG thuộc lịch của chính mình */}
+      <Modal open={otherScheduleWarning} onClose={() => setOtherScheduleWarning(false)} title="Không phải lịch của bạn">
+        <div style={{ padding: '4px 0' }}>
+          <p style={{ fontSize: 13.5, color: 'rgba(241,236,225,.7)', lineHeight: 1.55 }}>
+            Lịch hẹn này thuộc nhân viên khác, không phải lịch của bạn. Vẫn muốn tiếp tục cập nhật?
+          </p>
+          <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
+            <button onClick={() => setOtherScheduleWarning(false)} style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Huỷ</button>
+            <button onClick={() => { setOtherScheduleWarning(false); void handleSave(); }} style={{ flex: 1, background: '#EE8A33', color: '#0B1620', border: 'none', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Vẫn tiếp tục</button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Tooltip */}
       {tooltipData && (
