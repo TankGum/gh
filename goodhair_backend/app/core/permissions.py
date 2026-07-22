@@ -14,6 +14,7 @@ VIEW_DEPENDENCIES: dict[PermissionModule, tuple[PermissionModule, ...]] = {
         PermissionModule.BRANCHES,
         PermissionModule.SERVICES,
         PermissionModule.SHIFTS,
+        PermissionModule.ROLES,
     ),
 }
 

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '@/hooks/useLang';
 import { Playfair_Display, Hanken_Grotesk } from 'next/font/google';
+import { RefreshCw } from 'lucide-react';
 import {
   fetchPublicBranches,
   fetchPublicServices,
@@ -129,7 +130,7 @@ export default function BookingsClient() {
   }, [toast]);
 
   // Fetch booked windows whenever a specific barber + date is selected
-  useEffect(() => {
+  const refreshSlots = useCallback(() => {
     if (!barberId || !date) {
       setBookedWindows([]);
       return;
@@ -140,6 +141,10 @@ export default function BookingsClient() {
       .catch(() => setBookedWindows([]))
       .finally(() => setSlotsLoading(false));
   }, [barberId, date]);
+
+  useEffect(() => {
+    refreshSlots();
+  }, [refreshSlots]);
 
   const t = (vi: string, en: string) => lang === 'vi' ? vi : en;
 
@@ -522,9 +527,22 @@ export default function BookingsClient() {
                   );
                 })}
               </div>
-              <h3 style={{ fontSize: 13, letterSpacing: '.1em', textTransform: 'uppercase', color: styles.accent, margin: '28px 0 14px' }}>
-                {!date ? t('Chọn ngày để xem khung giờ', 'Select a date to see slots') : slotsLoading ? t('Đang tải khung giờ…', 'Loading slots…') : t('Khung giờ trống', 'Available slots')}
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '28px 0 14px' }}>
+                <h3 style={{ fontSize: 13, letterSpacing: '.1em', textTransform: 'uppercase', color: styles.accent, margin: 0 }}>
+                  {!date ? t('Chọn ngày để xem khung giờ', 'Select a date to see slots') : slotsLoading ? t('Đang tải khung giờ…', 'Loading slots…') : t('Khung giờ trống', 'Available slots')}
+                </h3>
+                {date && (
+                  <button
+                    onClick={refreshSlots}
+                    disabled={slotsLoading}
+                    title={t('Tải lại khung giờ', 'Refresh slots')}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: `1px solid ${styles.borderLight}`, color: styles.muted, padding: '6px 12px', borderRadius: 4, fontFamily: hanken.style.fontFamily, fontSize: 12.5, fontWeight: 600, cursor: slotsLoading ? 'default' : 'pointer', flexShrink: 0, opacity: slotsLoading ? 0.6 : 1 }}
+                  >
+                    <RefreshCw size={13} className={slotsLoading ? 'bk-spin' : ''} />
+                    {t('Làm mới', 'Refresh')}
+                  </button>
+                )}
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(86px,1fr))', gap: 10 }}>
                 {daySlots.map((label, i) => {
                   const slotH = parseInt(label.split(':')[0]);
@@ -642,6 +660,8 @@ export default function BookingsClient() {
           100% { box-shadow: 0 0 0 2px rgba(238,138,51,.3), 0 0 12px rgba(238,138,51,.2); border-color: #EE8A33; }
         }
         .bk-slot-spin { animation: slot-glow 0.35s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .bk-spin { animation: spin 0.7s linear infinite; }
         @keyframes toast-in {
           from { opacity: 0; transform: translateY(-12px); }
           to   { opacity: 1; transform: translateY(0); }

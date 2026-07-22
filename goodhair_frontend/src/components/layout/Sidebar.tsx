@@ -120,7 +120,7 @@ export default function Sidebar() {
           zIndex: 40,
           display: 'flex',
           flexDirection: 'column',
-          overflow: isMobile ? 'visible' : 'hidden',
+          overflow: 'hidden',
           left: isMobile ? (mobileOpen ? '0' : '-256px') : 0,
           transition: isMobile ? 'left .25s ease' : undefined,
           boxShadow: isMobile && mobileOpen ? '4px 0 32px rgba(0,0,0,.6)' : 'none',
@@ -162,9 +162,10 @@ export default function Sidebar() {
         </div>
 
         {/* Middle: nav + collapse + profile */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Nav */}
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Nav — cuộn dọc riêng khi danh sách dài hơn chỗ trống, để phần
+              collapse/profile/đăng xuất bên dưới luôn hiển thị được. */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
             {menuGroups.map((group, gi) => {
               const visible = group.items.filter(item => item.alwaysVisible || canView(item.module));
               if (!visible.length) return null;
@@ -289,37 +290,6 @@ export default function Sidebar() {
             })}
           </div>
 
-          {/* Collapse button — hidden on mobile */}
-          {!isMobile && (
-            <div
-              onClick={() => setCollapsed(!collapsed)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                cursor: 'pointer',
-                padding: effectiveCollapsed ? '10px 0' : '10px 14px',
-                justifyContent: effectiveCollapsed ? 'center' : 'flex-start',
-                color: 'rgba(255,255,255,.35)',
-                fontSize: 13,
-                margin: '0 8px 4px',
-                borderRadius: 8,
-                flexShrink: 0,
-                transition: 'background .15s, color .15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.05)'; e.currentTarget.style.color = 'rgba(255,255,255,.7)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,.35)'; }}
-            >
-              <ChevronLeft
-                size={16}
-                style={{ transform: effectiveCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform .2s', flexShrink: 0 }}
-              />
-              <span style={{ transition: 'max-width .2s, opacity .2s', maxWidth: effectiveCollapsed ? 0 : 160, opacity: effectiveCollapsed ? 0 : 1, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                Thu gọn
-              </span>
-            </div>
-          )}
-
           {/* User profile */}
           <div style={{ padding: effectiveCollapsed ? '8px 8px 4px' : '8px 10px 4px', flexShrink: 0 }}>
             <div style={{
@@ -380,6 +350,41 @@ export default function Sidebar() {
           </span>
         </div>
       </Sider>
+
+      {/* Nút thu gọn — nổi đè lên viền phải của sidebar, ngay dưới logo.
+          Đặt ngoài <Sider> (vốn overflow:hidden để cuộn menu) để có thể tràn
+          nửa trong nửa ngoài viền mà không bị cắt. */}
+      {!isMobile && (
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          title={effectiveCollapsed ? 'Mở rộng' : 'Thu gọn'}
+          style={{
+            position: 'fixed',
+            top: 64 - 12,
+            left: (effectiveCollapsed ? 64 : 256) - 12,
+            width: 24,
+            height: 24,
+            borderRadius: '50%',
+            background: '#152534',
+            border: '1px solid rgba(255,255,255,.14)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            cursor: 'pointer',
+            color: 'rgba(255,255,255,.55)',
+            zIndex: 41,
+            transition: 'left .2s ease, background .15s, color .15s, border-color .15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1c2f42'; e.currentTarget.style.color = '#EE8A33'; e.currentTarget.style.borderColor = 'rgba(238,138,51,.45)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#152534'; e.currentTarget.style.color = 'rgba(255,255,255,.55)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,.14)'; }}
+        >
+          <ChevronLeft
+            size={14}
+            style={{ transform: effectiveCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}
+          />
+        </button>
+      )}
 
       <Modal open={showLogoutModal} onClose={() => setShowLogoutModal(false)} title="Xác nhận đăng xuất" style={{ maxWidth: 340 }}>
         <div style={{ textAlign: 'center', padding: '8px 0' }}>

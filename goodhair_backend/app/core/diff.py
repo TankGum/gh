@@ -5,6 +5,8 @@ from typing import Any
 
 
 def _default_fmt(value: Any) -> str:
+    if isinstance(value, bool):
+        return "Có" if value else "Không"
     if value is None or value == "":
         return "∅"
     return str(value)

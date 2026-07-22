@@ -301,9 +301,12 @@ export default function RolesClient() {
               const isSelected = selectedRole?.id === r.id;
               const granted = countGranted(r.permissions);
               return (
-                <button
+                <div
                   key={r.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelectedRole(r)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRole(r); } }}
                   style={{
                     textAlign: 'left', borderRadius: 9, padding: '16px 17px',
                     cursor: 'pointer', fontFamily: "'Hanken Grotesk',sans-serif",
@@ -341,7 +344,7 @@ export default function RolesClient() {
                       </span>
                     )}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -407,14 +410,14 @@ export default function RolesClient() {
                 {services.length === 0 ? (
                   <div style={{ fontSize: 12.5, color: 'rgba(241,236,225,0.4)' }}>Chưa có dịch vụ nào.</div>
                 ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {services.map(svc => {
+                  <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid rgba(238,138,51,0.1)', borderRadius: 6, padding: '4px 14px' }}>
+                    {services.map((svc, i) => {
                       const pct = selectedRole.commissionRates[svc.id] ?? 0;
                       return (
-                        <span key={svc.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '5px 10px', borderRadius: 20, background: pct > 0 ? 'rgba(238,138,51,0.12)' : 'rgba(241,236,225,0.05)', color: pct > 0 ? '#F1ECE1' : 'rgba(241,236,225,0.4)' }}>
-                          {svc.name}
-                          <b style={{ color: pct > 0 ? '#EE8A33' : 'inherit' }}>{pct}%</b>
-                        </span>
+                        <div key={svc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 0', borderBottom: i < services.length - 1 ? '1px solid rgba(238,138,51,0.07)' : 'none' }}>
+                          <span style={{ fontSize: 13, color: pct > 0 ? '#F1ECE1' : 'rgba(241,236,225,0.4)' }}>{svc.name}</span>
+                          <b style={{ fontSize: 13, color: pct > 0 ? '#EE8A33' : 'rgba(241,236,225,0.3)', flexShrink: 0 }}>{pct}%</b>
+                        </div>
                       );
                     })}
                   </div>
@@ -476,44 +479,48 @@ export default function RolesClient() {
           </div>
 
           <div style={{ fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 8 }}>Quyền truy cập</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '8px 0 12px', borderBottom: '1px solid rgba(238,138,51,0.16)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700 }}>
-            <span>Màn hình</span>
-            {PERM_ACTIONS.map(a => <span key={a.key} style={{ textAlign: 'center' }}>{a.label}</span>)}
-          </div>
-          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-            {PERM_MODULES.map(mod => {
-              const perms = createPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
-              const allGranted = mod.actions.every(a => perms[a]);
-              return (
-                <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <button
-                      onClick={() => toggleAllPerm(createPerms, setCreatePerms, mod.key)}
-                      style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent', padding: 0 }}
-                    >
-                      {allGranted ? '✓' : ''}
-                    </button>
-                    <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
-                  </div>
-                  {PERM_ACTIONS.map(a => {
-                    if (!mod.actions.includes(a.key as PermActionKey)) {
-                      return <div key={a.key} />;
-                    }
-                    const granted = perms[a.key as keyof PermissionMap];
-                    return (
-                      <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <div style={{ minWidth: 420 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '8px 0 12px', borderBottom: '1px solid rgba(238,138,51,0.16)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700 }}>
+                <span>Màn hình</span>
+                {PERM_ACTIONS.map(a => <span key={a.key} style={{ textAlign: 'center' }}>{a.label}</span>)}
+              </div>
+              <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                {PERM_MODULES.map(mod => {
+                  const perms = createPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
+                  const allGranted = mod.actions.every(a => perms[a]);
+                  return (
+                    <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <button
-                          onClick={() => togglePerm(createPerms, setCreatePerms, mod.key, a.key)}
-                          style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: granted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: granted ? '#EE8A33' : 'transparent', color: granted ? '#0B1620' : 'transparent', padding: 0 }}
+                          onClick={() => toggleAllPerm(createPerms, setCreatePerms, mod.key)}
+                          style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent', padding: 0 }}
                         >
-                          {granted ? '✓' : ''}
+                          {allGranted ? '✓' : ''}
                         </button>
+                        <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
+                      {PERM_ACTIONS.map(a => {
+                        if (!mod.actions.includes(a.key as PermActionKey)) {
+                          return <div key={a.key} />;
+                        }
+                        const granted = perms[a.key as keyof PermissionMap];
+                        return (
+                          <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button
+                              onClick={() => togglePerm(createPerms, setCreatePerms, mod.key, a.key)}
+                              style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: granted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: granted ? '#EE8A33' : 'transparent', color: granted ? '#0B1620' : 'transparent', padding: 0 }}
+                            >
+                              {granted ? '✓' : ''}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 20 }}>
@@ -581,44 +588,48 @@ export default function RolesClient() {
             </div>
 
             <div style={{ fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 8 }}>Quyền truy cập</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '8px 0 12px', borderBottom: '1px solid rgba(238,138,51,0.16)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700 }}>
-              <span>Màn hình</span>
-              {PERM_ACTIONS.map(a => <span key={a.key} style={{ textAlign: 'center' }}>{a.label}</span>)}
-            </div>
-            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-              {PERM_MODULES.map(mod => {
-                const perms = editPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
-                const allGranted = mod.actions.every(a => perms[a]);
-                return (
-                  <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <button
-                        onClick={() => toggleAllPerm(editPerms, setEditPerms, mod.key)}
-                        style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent', padding: 0 }}
-                      >
-                        {allGranted ? '✓' : ''}
-                      </button>
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
-                    </div>
-                    {PERM_ACTIONS.map(a => {
-                      if (!mod.actions.includes(a.key as PermActionKey)) {
-                        return <div key={a.key} />;
-                      }
-                      const granted = perms[a.key as keyof PermissionMap];
-                      return (
-                        <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: 420 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '8px 0 12px', borderBottom: '1px solid rgba(238,138,51,0.16)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700 }}>
+                  <span>Màn hình</span>
+                  {PERM_ACTIONS.map(a => <span key={a.key} style={{ textAlign: 'center' }}>{a.label}</span>)}
+                </div>
+                <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                  {PERM_MODULES.map(mod => {
+                    const perms = editPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
+                    const allGranted = mod.actions.every(a => perms[a]);
+                    return (
+                      <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <button
-                            onClick={() => togglePerm(editPerms, setEditPerms, mod.key, a.key)}
-                            style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: granted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: granted ? '#EE8A33' : 'transparent', color: granted ? '#0B1620' : 'transparent', padding: 0 }}
+                            onClick={() => toggleAllPerm(editPerms, setEditPerms, mod.key)}
+                            style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent', padding: 0 }}
                           >
-                            {granted ? '✓' : ''}
+                            {allGranted ? '✓' : ''}
                           </button>
+                          <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                        {PERM_ACTIONS.map(a => {
+                          if (!mod.actions.includes(a.key as PermActionKey)) {
+                            return <div key={a.key} />;
+                          }
+                          const granted = perms[a.key as keyof PermissionMap];
+                          return (
+                            <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => togglePerm(editPerms, setEditPerms, mod.key, a.key)}
+                                style={{ width: 20, height: 20, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, cursor: 'pointer', border: granted ? 'none' : '1px solid rgba(241,236,225,0.25)', background: granted ? '#EE8A33' : 'transparent', color: granted ? '#0B1620' : 'transparent', padding: 0 }}
+                              >
+                                {granted ? '✓' : ''}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 20 }}>

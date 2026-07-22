@@ -10,7 +10,7 @@ from app.auth.jwt import (
     decode_token,
     refresh_token_expires_seconds,
 )
-from app.core.constants import AccountStatus, ActivityAction
+from app.core.constants import AccountStatus
 from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.settings import get_settings
 from app.db.repositories.account import AccountRepository
@@ -18,7 +18,6 @@ from app.db.repositories.employee import EmployeeRepository
 from app.db.repositories.refresh_token import RefreshTokenRepository
 from app.db.repositories.role import RoleRepository
 from app.models.account import Account
-from app.services.activity_logs.service import ActivityLogService
 from app.services.auth.google import verify_google_id_token
 
 
@@ -28,11 +27,8 @@ class AuthService:
         self.employee_repo = EmployeeRepository(session)
         self.refresh_token_repo = RefreshTokenRepository(session)
         self.role_repo = RoleRepository(session)
-        self.activity = ActivityLogService(session)
 
-    async def login_with_google(
-        self, id_token_str: str, *, ip_address: str | None = None
-    ) -> tuple[Account, str, str]:
+    async def login_with_google(self, id_token_str: str) -> tuple[Account, str, str]:
         google_info = verify_google_id_token(id_token_str)
         account = await self.account_repo.get_by_google_id(google_info["google_id"])
 
@@ -83,15 +79,6 @@ class AuthService:
             )
 
         access_token, raw_refresh = await self._issue_tokens(account)
-        await self.activity.log(
-            ActivityAction.LOGIN,
-            "system",
-            entity_type="account",
-            entity_id=account.id,
-            target_label=f"Đăng nhập · {account.email}",
-            actor_account_id=account.id,
-            ip_address=ip_address,
-        )
         return account, access_token, raw_refresh
 
     async def refresh(self, raw_refresh_token: str) -> tuple[Account, str, str]:

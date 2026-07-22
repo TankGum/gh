@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { DatePicker, Spin, App } from 'antd';
-import { Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock, Eye, EyeOff } from 'lucide-react';
 import dayjs from 'dayjs';
 import FilterSelect from '@/components/ui/FilterSelect';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import AdminTable, { ColumnDef } from '@/components/ui/AdminTable';
 import Modal from '@/components/ui/Modal';
 import {
@@ -20,6 +21,9 @@ import type { PayrollEmployeeSummary, PayrollDetail, PayrollLockStatus, PayrollP
 import { useAuth } from '@/contexts/AuthContext';
 
 const fmtVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' VND';
+const maskVnd = (n: number, visible: boolean) => (visible ? fmtVnd(n) : '••••••');
+
+const AMOUNTS_VISIBLE_KEY = 'payroll_amounts_visible';
 
 function fmtDateTime(iso: string): string {
   const d = new Date(iso);
@@ -33,21 +37,22 @@ function fmtDateShort(iso: string): string {
   return `${z(d.getDate())}/${z(d.getMonth() + 1)}`;
 }
 
-function PayrollDetailBody({ detail }: { detail: PayrollDetail }) {
+function PayrollDetailBody({ detail, amountsVisible }: { detail: PayrollDetail; amountsVisible: boolean }) {
+  const isMobile = useIsMobile();
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
         <div style={{ background: '#0B1620', border: '1px solid rgba(238,138,51,.16)', borderRadius: 8, padding: '14px 16px' }}>
           <div style={{ fontSize: 11, color: 'rgba(241,236,225,.45)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Lương cứng</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#F1ECE1' }}>{fmtVnd(detail.baseSalary)}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#F1ECE1' }}>{maskVnd(detail.baseSalary, amountsVisible)}</div>
         </div>
         <div style={{ background: '#0B1620', border: '1px solid rgba(238,138,51,.16)', borderRadius: 8, padding: '14px 16px' }}>
           <div style={{ fontSize: 11, color: 'rgba(241,236,225,.45)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Hoa hồng</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#F1ECE1' }}>{fmtVnd(detail.commissionTotal)}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#F1ECE1' }}>{maskVnd(detail.commissionTotal, amountsVisible)}</div>
         </div>
         <div style={{ background: 'linear-gradient(135deg, rgba(238,138,51,.16) 0%, rgba(238,138,51,.05) 100%)', border: '1px solid rgba(238,138,51,.35)', borderRadius: 8, padding: '14px 16px' }}>
           <div style={{ fontSize: 11, color: 'rgba(241,236,225,.6)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Tổng lương</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#EE8A33' }}>{fmtVnd(detail.totalSalary)}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#EE8A33' }}>{maskVnd(detail.totalSalary, amountsVisible)}</div>
         </div>
       </div>
 
@@ -64,7 +69,7 @@ function PayrollDetailBody({ detail }: { detail: PayrollDetail }) {
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#F1ECE1' }}>{b.serviceName}</div>
                 <div style={{ fontSize: 11.5, color: 'rgba(241,236,225,.45)' }}>{b.count} lượt</div>
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#EE8A33' }}>{fmtVnd(b.commissionAmount)}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#EE8A33' }}>{maskVnd(b.commissionAmount, amountsVisible)}</div>
             </div>
           ))}
         </div>
@@ -76,6 +81,7 @@ function PayrollDetailBody({ detail }: { detail: PayrollDetail }) {
 export default function PayrollClient() {
   const { message } = App.useApp();
   const { can } = useAuth();
+  const isMobile = useIsMobile();
   const canViewAll = can('payroll', 'view');
   const canLock = canViewAll && can('payroll', 'edit');
   const canUnlock = canViewAll && can('payroll', 'delete');
@@ -94,6 +100,21 @@ export default function PayrollClient() {
   const [detailTarget, setDetailTarget] = useState<PayrollEmployeeSummary | null>(null);
   const [detail, setDetail] = useState<PayrollDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  const [amountsVisible, setAmountsVisible] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(AMOUNTS_VISIBLE_KEY);
+    if (stored !== null) setAmountsVisible(stored === '1');
+  }, []);
+
+  const toggleAmountsVisible = () => {
+    setAmountsVisible(v => {
+      const next = !v;
+      localStorage.setItem(AMOUNTS_VISIBLE_KEY, next ? '1' : '0');
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!canViewAll) return;
@@ -205,9 +226,9 @@ export default function PayrollClient() {
         </div>
       ),
     },
-    { key: 'base', header: 'Lương cứng', width: '140px', render: row => <span style={{ fontSize: 13, color: '#F1ECE1' }}>{fmtVnd(row.baseSalary)}</span> },
-    { key: 'commission', header: 'Hoa hồng', width: '140px', render: row => <span style={{ fontSize: 13, color: '#F1ECE1' }}>{fmtVnd(row.commissionTotal)}</span> },
-    { key: 'total', header: 'Tổng lương', width: '150px', render: row => <span style={{ fontSize: 13.5, fontWeight: 700, color: '#EE8A33' }}>{fmtVnd(row.totalSalary)}</span> },
+    { key: 'base', header: 'Lương cứng', width: '140px', render: row => <span style={{ fontSize: 13, color: '#F1ECE1' }}>{maskVnd(row.baseSalary, amountsVisible)}</span> },
+    { key: 'commission', header: 'Hoa hồng', width: '140px', render: row => <span style={{ fontSize: 13, color: '#F1ECE1' }}>{maskVnd(row.commissionTotal, amountsVisible)}</span> },
+    { key: 'total', header: 'Tổng lương', width: '150px', render: row => <span style={{ fontSize: 13.5, fontWeight: 700, color: '#EE8A33' }}>{maskVnd(row.totalSalary, amountsVisible)}</span> },
     { key: 'bookings', header: 'Lịch hoàn thành', width: '120px', align: 'center', render: row => <span style={{ fontSize: 13, color: 'rgba(241,236,225,.7)' }}>{row.bookingCount}</span> },
   ];
 
@@ -226,6 +247,14 @@ export default function PayrollClient() {
           )}
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            onClick={toggleAmountsVisible}
+            title={amountsVisible ? 'Ẩn số tiền' : 'Hiện số tiền'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: isMobile ? '8px' : '8px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', height: 36, flexShrink: 0 }}
+          >
+            {amountsVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+            {!isMobile && (amountsVisible ? 'Ẩn số tiền' : 'Hiện số tiền')}
+          </button>
           <DatePicker
             picker="month"
             value={dayjs(month)}
@@ -281,7 +310,7 @@ export default function PayrollClient() {
         <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>
       ) : (
         <div style={{ background: '#0f1e2b', border: '1px solid rgba(238,138,51,0.16)', borderRadius: 8, padding: 22 }}>
-          <PayrollDetailBody detail={detail} />
+          <PayrollDetailBody detail={detail} amountsVisible={amountsVisible} />
         </div>
       )}
 
@@ -295,7 +324,7 @@ export default function PayrollClient() {
           {detailLoading || !detail ? (
             <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
           ) : (
-            <PayrollDetailBody detail={detail} />
+            <PayrollDetailBody detail={detail} amountsVisible={amountsVisible} />
           )}
         </Modal>
       )}

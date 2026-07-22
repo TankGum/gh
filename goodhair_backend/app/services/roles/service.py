@@ -7,6 +7,7 @@ from app.core.diff import compute_changes
 from app.core.exceptions import BadRequestError, NotFoundError
 from app.core.permissions import effective_permissions
 from app.db.repositories.role import RoleRepository
+from app.db.repositories.service import ServiceRepository
 from app.models.role import Role
 from app.schemas.base import PageParams
 from app.schemas.role import RoleCreate, RoleRead, RoleUpdate
@@ -40,9 +41,15 @@ def _fmt_perms(perms: dict[str, bool]) -> str:
     return ", ".join(enabled) if enabled else "Trống"
 
 
+def _fmt_pct(value: float) -> str:
+    return f"{value:g}%"
+
+
 class RoleService:
     def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self.repo = RoleRepository(session)
+        self.service_repo = ServiceRepository(session)
         self.activity = ActivityLogService(session)
 
     async def list_roles(self, page: PageParams) -> tuple[list[Role], int]:
@@ -70,7 +77,12 @@ class RoleService:
         if not payload:
             return role
         old_perms = dict(role.permissions) if "permissions" in payload else None
-        before = {k: getattr(role, k) for k in payload if k != "permissions"}
+        old_comm = dict(role.commission_rates or {}) if "commission_rates" in payload else None
+        before = {
+            k: getattr(role, k)
+            for k in payload
+            if k not in ("permissions", "commission_rates")
+        }
         await self.repo.update(role, payload)
         changes = compute_changes(before, payload, ROLE_LABELS)
         if old_perms is not None:
@@ -87,6 +99,20 @@ class RoleService:
                         "label": f"Phân quyền · {mod_label}",
                         "from": old_fmt,
                         "to": new_fmt,
+                    })
+        if old_comm is not None:
+            new_comm = payload["commission_rates"] or {}
+            changed_ids = {
+                sid for sid in set(old_comm) | set(new_comm)
+                if float(old_comm.get(sid, 0) or 0) != float(new_comm.get(sid, 0) or 0)
+            }
+            if changed_ids:
+                svc_names = await self._service_names(changed_ids)
+                for sid in sorted(changed_ids, key=lambda s: svc_names.get(s, s)):
+                    changes.append({
+                        "label": f"Hoa hồng · {svc_names.get(sid, sid)}",
+                        "from": _fmt_pct(float(old_comm.get(sid, 0) or 0)),
+                        "to": _fmt_pct(float(new_comm.get(sid, 0) or 0)),
                     })
         await self.activity.log(
             ActivityAction.UPDATE,
@@ -110,6 +136,18 @@ class RoleService:
             entity_id=role.id,
             target_label=role.name,
         )
+
+    async def _service_names(self, service_ids: set[str]) -> dict[str, str]:
+        valid_ids: list[UUID] = []
+        for sid in service_ids:
+            try:
+                valid_ids.append(UUID(sid))
+            except ValueError:
+                continue
+        if not valid_ids:
+            return {}
+        services = await self.service_repo.list_by_ids(valid_ids)
+        return {str(s.id): s.name for s in services}
 
     async def _get_or_404(self, role_id: UUID) -> Role:
         role = await self.repo.get_by_id(role_id)
