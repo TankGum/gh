@@ -9,6 +9,7 @@ from app.auth.dependencies import get_current_account_id
 from app.auth.jwt import refresh_token_expires_seconds
 from app.core.constants import AppEnv
 from app.core.exceptions import UnauthorizedError
+from app.core.permissions import effective_permissions
 from app.core.settings import get_settings
 from app.db.repositories.account import AccountRepository
 from app.db.repositories.employee import EmployeeRepository
@@ -113,6 +114,7 @@ async def get_me(
         if role is not None and role.deleted_at is None:
             me.role = RoleSummary(id=role.id, name=role.name)
             me.permissions = cast(
-                dict[str, PermissionMap], role.permissions or {}
+                dict[str, PermissionMap],
+                effective_permissions(role.is_system, role.permissions),
             )
     return me

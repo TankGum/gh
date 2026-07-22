@@ -9,7 +9,7 @@ from app.auth.jwt import decode_token
 from app.core.actor_context import set_actor
 from app.core.constants import AccountStatus, PermissionAction, PermissionModule
 from app.core.exceptions import ForbiddenError, UnauthorizedError
-from app.core.permissions import PermissionTree, has_permission
+from app.core.permissions import PermissionTree, effective_permissions, has_permission
 from app.db.repositories.employee import EmployeeRepository
 from app.db.repositories.role import RoleRepository
 from app.db.session import get_db_session
@@ -63,7 +63,7 @@ async def get_current_permissions(
     role = await RoleRepository(session).get_by_id(employee.role_id)
     if role is None or role.deleted_at is not None:
         return {}
-    return role.permissions or {}
+    return effective_permissions(role.is_system, role.permissions)
 
 
 def require_permission(

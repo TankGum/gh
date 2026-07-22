@@ -5,10 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import ActivityAction, PermissionModule
 from app.core.diff import compute_changes
 from app.core.exceptions import BadRequestError, NotFoundError
+from app.core.permissions import effective_permissions
 from app.db.repositories.role import RoleRepository
 from app.models.role import Role
 from app.schemas.base import PageParams
-from app.schemas.role import RoleCreate, RoleUpdate
+from app.schemas.role import RoleCreate, RoleRead, RoleUpdate
 from app.services.activity_logs.labels import ROLE_LABELS
 from app.services.activity_logs.service import ActivityLogService
 
@@ -28,9 +29,9 @@ PERM_MODULE_LABELS: dict[str, str] = {
     "customers": "Khách hàng",
     "branches": "Chi nhánh",
     "services": "Dịch vụ",
-    "recruit": "Tuyển dụng",
     "roles": "Quản lý vai trò",
     "logs": "Nhật ký hoạt động",
+    "payroll": "Toàn bộ bảng lương",
 }
 
 
@@ -120,3 +121,18 @@ class RoleService:
         for role in roles:
             role.employee_count = await self.repo.get_employee_count(role.id)
         return roles
+
+    def to_read(self, role: Role) -> RoleRead:
+        """Vai trò hệ thống (Admin) luôn hiển thị toàn quyền — không lấy trực
+        tiếp `role.permissions` đã lưu vì có thể thiếu module mới thêm sau."""
+        return RoleRead(
+            id=role.id,
+            name=role.name,
+            description=role.description,
+            is_system=role.is_system,
+            is_bookable=role.is_bookable,
+            employee_count=getattr(role, "employee_count", 0),
+            permissions=effective_permissions(role.is_system, role.permissions),
+            base_salary=role.base_salary,
+            commission_rates=role.commission_rates or {},
+        )

@@ -29,7 +29,8 @@ async def list_roles(
 ) -> PaginatedResponse[RoleRead]:
     items, total = await service.list_roles(page=params)
     items = await service.enrich_with_employee_count(items)
-    return PaginatedResponse.create(items=items, total=total, page=params)
+    reads = [service.to_read(r) for r in items]
+    return PaginatedResponse.create(items=reads, total=total, page=params)
 
 
 @router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED)
@@ -41,7 +42,7 @@ async def create_role(
     ),
 ) -> RoleRead:
     role = await service.create(payload)
-    return RoleRead.model_validate(role)
+    return service.to_read(role)
 
 
 @router.patch("/{role_id}", response_model=RoleRead)
@@ -54,7 +55,7 @@ async def update_role(
     ),
 ) -> RoleRead:
     role = await service.update(role_id, payload)
-    return RoleRead.model_validate(role)
+    return service.to_read(role)
 
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
