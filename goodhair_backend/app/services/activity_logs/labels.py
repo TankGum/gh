@@ -36,4 +36,5 @@ ROLE_LABELS = {
     "name": "Tên vai trò",
     "description": "Mô tả",
     "is_bookable": "Có thể đặt lịch",
+    "base_salary": "Lương cứng",
 }

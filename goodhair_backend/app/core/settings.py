@@ -45,6 +45,20 @@ class Settings(BaseSettings):
     # Base URL công khai để dựng URL tuyệt đối cho file tĩnh (prod đổi sang domain API).
     public_base_url: str = "http://localhost:8002"
 
+    # Kỳ lương: 0 = trọn tháng dương lịch (mặc định, 1 -> ngày cuối tháng).
+    # Đặt 1-28 nếu chốt lương giữa tháng — khi đó "lương tháng X" sẽ tính từ
+    # (N+1) tháng trước đến N tháng X (vd N=25 -> kỳ 26/5 -> 25/6).
+    payroll_cutoff_day: int = 0
+    # Chỉ để hiển thị (ngày dự kiến chi trả lương, tháng sau khi kỳ lương kết
+    # thúc) — không ảnh hưởng cách tính hoa hồng/lương cứng.
+    payroll_payday: int = 5
+
+    # Cặp khoá dùng để ký lệnh in QZ Tray (in hoá đơn ra máy in nhiệt tại
+    # quầy) — tạo bằng scripts/generate_qz_cert.py. Không cấu hình thì tính
+    # năng in tự tắt (frontend không gọi được /print/sign).
+    qz_private_key_path: str = ""
+    qz_certificate_path: str = ""
+
     @property
     def timezone(self) -> ZoneInfo:
         return ZoneInfo(self.local_timezone)

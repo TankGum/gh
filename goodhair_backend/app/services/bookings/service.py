@@ -10,7 +10,10 @@ from app.db.repositories.booking import BookingRepository
 from app.db.repositories.booking_service_item import BookingServiceItemRepository
 from app.db.repositories.customer import CustomerRepository
 from app.db.repositories.employee import EmployeeRepository
+from app.db.repositories.role import RoleRepository
+from app.db.repositories.service import ServiceRepository
 from app.models.booking import Booking
+from app.models.employee import Employee
 from app.schemas.base import PageParams
 from app.schemas.booking import BookingCreate, BookingUpdate
 from app.services.activity_logs.labels import BOOKING_LABELS
@@ -31,6 +34,8 @@ class BookingService:
         self.svc_item_repo = BookingServiceItemRepository(session)
         self.customer_repo = CustomerRepository(session)
         self.emp_repo = EmployeeRepository(session)
+        self.role_repo = RoleRepository(session)
+        self.service_repo = ServiceRepository(session)
         self.activity = ActivityLogService(session)
 
     def _booking_target(self, booking: Booking) -> str:
@@ -149,8 +154,24 @@ class BookingService:
                     "total_bookings": emp.total_bookings + 1,
                     "total_revenue": emp.total_revenue + booking.total,
                 })
+                await self._snapshot_commission(booking, emp)
             await self._sync_customer(booking, add_stats=True)
         return booking
+
+    async def _snapshot_commission(self, booking: Booking, emp: Employee) -> None:
+        """Khoá hoa hồng từng dịch vụ tại thời điểm hoàn thành — dùng giá dịch
+        vụ và % hoa hồng của vai trò hiện tại, không đổi khi sau này sửa lại."""
+        if emp.role_id is None:
+            return
+        role = await self.role_repo.get_by_id(emp.role_id)
+        rates: dict = (role.commission_rates or {}) if role else {}
+        service_ids = await self.svc_item_repo.get_service_ids(booking.id)
+        if not service_ids:
+            return
+        services = await self.service_repo.list_by_ids(service_ids)
+        price_map = {s.id: s.price for s in services}
+        rate_map = {sid: float(rates.get(str(sid), 0)) for sid in service_ids}
+        await self.svc_item_repo.snapshot_commission(booking.id, price_map, rate_map)
 
     async def delete(self, booking_id: UUID) -> None:
         booking = await self.get_by_id(booking_id)

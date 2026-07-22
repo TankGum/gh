@@ -18,6 +18,8 @@ class RoleRead(AppSchema):
     is_bookable: bool
     employee_count: int = 0
     permissions: dict[str, PermissionMap]
+    base_salary: int = 0
+    commission_rates: dict[str, float] = {}
 
 
 class RoleListParams(PageParams):
@@ -29,6 +31,8 @@ class RoleCreate(AppSchema):
     description: str | None = None
     is_bookable: bool = False
     permissions: dict[str, PermissionMap] = {}
+    base_salary: int = 0
+    commission_rates: dict[str, float] = {}
 
 
 class RoleUpdate(AppSchema):
@@ -36,3 +40,5 @@ class RoleUpdate(AppSchema):
     description: str | None = None
     is_bookable: bool | None = None
     permissions: dict[str, PermissionMap] | None = None
+    base_salary: int | None = None
+    commission_rates: dict[str, float] | None = None

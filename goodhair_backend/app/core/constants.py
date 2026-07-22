@@ -18,9 +18,9 @@ class PermissionModule(StrEnum):
     CUSTOMERS = "customers"
     BRANCHES = "branches"
     SERVICES = "services"
-    RECRUIT = "recruit"
     ROLES = "roles"
     LOGS = "logs"
+    PAYROLL = "payroll"
 
 
 class PermissionAction(StrEnum):

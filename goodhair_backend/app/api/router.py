@@ -8,6 +8,8 @@ from app.api.private.employee_shifts.router import router as employee_shifts_rou
 from app.api.private.employees.router import router as employees_router
 from app.api.private.logs.router import router as logs_router
 from app.api.private.overview.router import router as overview_router
+from app.api.private.payroll.router import router as payroll_router
+from app.api.private.print.router import router as print_router
 from app.api.private.revenue.router import router as revenue_router
 from app.api.private.roles.router import router as roles_router
 from app.api.private.services.router import router as services_router
@@ -57,4 +59,10 @@ api_router.include_router(
 )
 api_router.include_router(
     logs_router, prefix="/logs", tags=["Logs"], dependencies=_private
+)
+api_router.include_router(
+    payroll_router, prefix="/payroll", tags=["Payroll"], dependencies=_private
+)
+api_router.include_router(
+    print_router, prefix="/print", tags=["Print"], dependencies=_private
 )
