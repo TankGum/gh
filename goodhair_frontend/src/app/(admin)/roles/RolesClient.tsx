@@ -5,24 +5,33 @@ import { App, Spin, Input } from 'antd';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import FilterBar from '@/components/ui/FilterBar';
 import { fetchRoles, createRole, updateRole, deleteRole } from '@/services/roles.api';
+import { fetchServices } from '@/services/services.api';
 import type { Role, PermissionMap, RoleCreatePayload, RoleUpdatePayload } from '@/types/role.type';
+import type { HairService } from '@/types/service.type';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
-const PERM_MODULES = [
-  { key: 'overview', label: 'Tổng quan' },
-  { key: 'bookings', label: 'Đặt lịch' },
-  { key: 'revenue', label: 'Doanh thu' },
-  { key: 'staff', label: 'Nhân viên' },
-  { key: 'shifts', label: 'Ca làm việc' },
-  { key: 'customers', label: 'Khách hàng' },
-  { key: 'branches', label: 'Chi nhánh' },
-  { key: 'services', label: 'Dịch vụ' },
-  { key: 'recruit', label: 'Tuyển dụng' },
-  { key: 'roles', label: 'Quản lý vai trò' },
-  { key: 'logs', label: 'Nhật ký hoạt động' },
+type PermActionKey = 'view' | 'create' | 'edit' | 'delete';
+
+// `actions` liệt kê đúng những action mà màn hình đó THỰC SỰ có (khớp với
+// các endpoint backend yêu cầu quyền tương ứng) — action không có trong danh
+// sách sẽ không hiển thị ô tick, tránh cấp quyền cho chức năng không tồn tại.
+const PERM_MODULES: { key: string; label: string; actions: PermActionKey[] }[] = [
+  { key: 'overview',  label: 'Tổng quan',          actions: ['view'] },
+  { key: 'bookings',  label: 'Đặt lịch',           actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'revenue',   label: 'Doanh thu',          actions: ['view'] },
+  { key: 'staff',     label: 'Nhân viên',          actions: ['view', 'edit', 'delete'] },
+  { key: 'shifts',    label: 'Ca làm việc',        actions: ['view', 'edit'] },
+  { key: 'customers', label: 'Khách hàng',         actions: ['view'] },
+  { key: 'branches',  label: 'Chi nhánh',          actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'services',  label: 'Dịch vụ',            actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'roles',     label: 'Quản lý vai trò',    actions: ['view', 'create', 'edit', 'delete'] },
+  { key: 'logs',      label: 'Nhật ký hoạt động',  actions: ['view'] },
+  { key: 'payroll',   label: 'Toàn bộ bảng lương', actions: ['view', 'edit', 'delete'] },
 ];
+
+const fmtVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' đ';
 
 const PERM_ACTIONS = [
   { key: 'view', label: 'Xem' },
@@ -30,6 +39,10 @@ const PERM_ACTIONS = [
   { key: 'edit', label: 'Sửa' },
   { key: 'delete', label: 'Xoá' },
 ];
+
+function moduleActions(moduleKey: string): PermActionKey[] {
+  return PERM_MODULES.find(m => m.key === moduleKey)?.actions ?? [];
+}
 
 function emptyPerms(): Record<string, PermissionMap> {
   const o: Record<string, PermissionMap> = {};
@@ -43,6 +56,23 @@ function clonePerms(p: Record<string, PermissionMap>): Record<string, Permission
 
 function countGranted(perms: Record<string, PermissionMap>): number {
   return PERM_MODULES.filter(m => perms[m.key]?.view).length;
+}
+
+// Chỉ giữ lại đúng các module còn tồn tại + ép về false mọi action không áp
+// dụng cho module đó, trước khi gửi lên API — dọn rác dữ liệu quyền cũ (vd
+// module đã bị bỏ, hoặc action không còn tồn tại cho màn đó).
+function sanitizePerms(perms: Record<string, PermissionMap>): Record<string, PermissionMap> {
+  const out: Record<string, PermissionMap> = {};
+  PERM_MODULES.forEach(m => {
+    const cell = perms[m.key];
+    out[m.key] = {
+      view: m.actions.includes('view') ? !!cell?.view : false,
+      create: m.actions.includes('create') ? !!cell?.create : false,
+      edit: m.actions.includes('edit') ? !!cell?.edit : false,
+      delete: m.actions.includes('delete') ? !!cell?.delete : false,
+    };
+  });
+  return out;
 }
 
 export default function RolesClient() {
@@ -59,6 +89,8 @@ export default function RolesClient() {
   const [error, setError] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
+  const [services, setServices] = useState<HairService[]>([]);
+
   // Edit modal
   const [editOpen, setEditOpen] = useState(false);
   const [editRole, setEditRole] = useState<Role | null>(null);
@@ -66,6 +98,8 @@ export default function RolesClient() {
   const [editDesc, setEditDesc] = useState('');
   const [editIsBookable, setEditIsBookable] = useState(false);
   const [editPerms, setEditPerms] = useState<Record<string, PermissionMap>>({});
+  const [editBaseSalary, setEditBaseSalary] = useState(0);
+  const [editCommission, setEditCommission] = useState<Record<string, number>>({});
 
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -73,6 +107,8 @@ export default function RolesClient() {
   const [createDesc, setCreateDesc] = useState('');
   const [createIsBookable, setCreateIsBookable] = useState(false);
   const [createPerms, setCreatePerms] = useState<Record<string, PermissionMap>>(emptyPerms());
+  const [createBaseSalary, setCreateBaseSalary] = useState(0);
+  const [createCommission, setCreateCommission] = useState<Record<string, number>>({});
 
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
@@ -104,11 +140,17 @@ export default function RolesClient() {
     }
   }, [roles, selectedRole]);
 
+  useEffect(() => {
+    fetchServices({ size: 100 }).then(res => setServices(res.items)).catch(() => {});
+  }, []);
+
   const openCreate = () => {
     setCreateName('');
     setCreateDesc('');
     setCreateIsBookable(false);
     setCreatePerms(emptyPerms());
+    setCreateBaseSalary(0);
+    setCreateCommission({});
     setCreateOpen(true);
   };
 
@@ -118,6 +160,8 @@ export default function RolesClient() {
     setEditDesc(r.description ?? '');
     setEditIsBookable(r.isBookable);
     setEditPerms(clonePerms(r.permissions));
+    setEditBaseSalary(r.baseSalary);
+    setEditCommission({ ...r.commissionRates });
     setEditOpen(true);
   };
 
@@ -133,7 +177,9 @@ export default function RolesClient() {
         name: createName.trim(),
         description: createDesc.trim() || null,
         isBookable: createIsBookable,
-        permissions: createPerms,
+        permissions: sanitizePerms(createPerms),
+        baseSalary: createBaseSalary,
+        commissionRates: createCommission,
       };
       await createRole(payload);
       message.success('Tạo vai trò thành công');
@@ -153,7 +199,9 @@ export default function RolesClient() {
       const payload: RoleUpdatePayload = { name: editName.trim() };
       if (editDesc !== (editRole.description ?? '')) payload.description = editDesc.trim() || null;
       if (editIsBookable !== editRole.isBookable) payload.isBookable = editIsBookable;
-      payload.permissions = editPerms;
+      payload.permissions = sanitizePerms(editPerms);
+      payload.baseSalary = editBaseSalary;
+      payload.commissionRates = editCommission;
       const updated = await updateRole(editRole.id, payload);
       setEditOpen(false);
       message.success('Cập nhật vai trò thành công');
@@ -187,10 +235,13 @@ export default function RolesClient() {
     setter: (p: Record<string, PermissionMap>) => void,
     moduleKey: string,
   ) => {
+    const actions = moduleActions(moduleKey);
     const copy = clonePerms(perms);
     const cell = copy[moduleKey] ?? { view: false, create: false, edit: false, delete: false };
-    const allGranted = cell.view && cell.create && cell.edit && cell.delete;
-    copy[moduleKey] = { view: !allGranted, create: !allGranted, edit: !allGranted, delete: !allGranted };
+    const allGranted = actions.every(a => cell[a]);
+    const next: PermissionMap = { view: false, create: false, edit: false, delete: false };
+    actions.forEach(a => { next[a] = !allGranted; });
+    copy[moduleKey] = next;
     setter(copy);
   };
 
@@ -323,17 +374,15 @@ export default function RolesClient() {
                   </div>
                   {PERM_MODULES.map(mod => {
                     const perms = selectedPerms[mod.key];
-                    const allGranted = perms?.view && perms?.create && perms?.edit && perms?.delete;
-                    const noneGranted = !perms?.view && !perms?.create && !perms?.edit && !perms?.delete;
                     return (
                       <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '12px 22px', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 18, height: 18, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, border: allGranted ? 'none' : '1px solid rgba(241,236,225,0.2)', background: allGranted ? '#EE8A33' : 'transparent', color: allGranted ? '#0B1620' : 'transparent' }}>
-                            {allGranted ? '✓' : noneGranted ? '' : '–'}
-                          </span>
                           <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
                         </div>
                         {PERM_ACTIONS.map(a => {
+                          if (!mod.actions.includes(a.key as PermActionKey)) {
+                            return <div key={a.key} />;
+                          }
                           const granted = perms?.[a.key as keyof PermissionMap] ?? false;
                           return (
                             <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
@@ -347,6 +396,29 @@ export default function RolesClient() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Lương & hoa hồng — view-only */}
+              <div style={{ borderTop: '1px solid rgba(238,138,51,0.16)', padding: '18px 22px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700 }}>Lương & hoa hồng</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#EE8A33' }}>{fmtVnd(selectedRole.baseSalary)}<span style={{ fontSize: 11, color: 'rgba(241,236,225,0.45)', fontWeight: 600 }}> /tháng (lương cứng)</span></div>
+                </div>
+                {services.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: 'rgba(241,236,225,0.4)' }}>Chưa có dịch vụ nào.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {services.map(svc => {
+                      const pct = selectedRole.commissionRates[svc.id] ?? 0;
+                      return (
+                        <span key={svc.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '5px 10px', borderRadius: 20, background: pct > 0 ? 'rgba(238,138,51,0.12)' : 'rgba(241,236,225,0.05)', color: pct > 0 ? '#F1ECE1' : 'rgba(241,236,225,0.4)' }}>
+                          {svc.name}
+                          <b style={{ color: pct > 0 ? '#EE8A33' : 'inherit' }}>{pct}%</b>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -377,6 +449,32 @@ export default function RolesClient() {
             </button>
             <span style={{ fontSize: 13, color: 'rgba(241,236,225,0.8)', fontWeight: 600 }}>Cho phép đặt lịch (hiện ra trang booking)</span>
           </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 7 }}>Lương cứng (VNĐ/tháng)</label>
+            <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+              <Input size="large" variant="borderless" type="number" min={0} value={createBaseSalary} onChange={e => setCreateBaseSalary(Math.max(0, Number(e.target.value) || 0))} />
+            </div>
+          </div>
+          <div style={{ fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 8 }}>Hoa hồng theo dịch vụ (%)</div>
+          <div style={{ maxHeight: 220, overflowY: 'auto', marginBottom: 20, border: '1px solid rgba(238,138,51,0.1)', borderRadius: 6, padding: '4px 12px' }}>
+            {services.length === 0 && <div style={{ fontSize: 12.5, color: 'rgba(241,236,225,0.4)', padding: '10px 0' }}>Chưa có dịch vụ nào.</div>}
+            {services.map(svc => (
+              <div key={svc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 0', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
+                <span style={{ fontSize: 13, color: '#F1ECE1' }}>{svc.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <input
+                    type="number" min={0} max={100} step={0.5}
+                    value={createCommission[svc.id] ?? 0}
+                    onChange={e => setCreateCommission(prev => ({ ...prev, [svc.id]: Math.min(100, Math.max(0, Number(e.target.value) || 0)) }))}
+                    style={{ width: 64, background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', borderRadius: 6, padding: '6px 8px', fontSize: 13, textAlign: 'right' }}
+                  />
+                  <span style={{ fontSize: 12, color: 'rgba(241,236,225,0.5)' }}>%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div style={{ fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 8 }}>Quyền truy cập</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '8px 0 12px', borderBottom: '1px solid rgba(238,138,51,0.16)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700 }}>
             <span>Màn hình</span>
@@ -385,7 +483,7 @@ export default function RolesClient() {
           <div style={{ maxHeight: 320, overflowY: 'auto' }}>
             {PERM_MODULES.map(mod => {
               const perms = createPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
-              const allGranted = perms.view && perms.create && perms.edit && perms.delete;
+              const allGranted = mod.actions.every(a => perms[a]);
               return (
                 <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -398,6 +496,9 @@ export default function RolesClient() {
                     <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
                   </div>
                   {PERM_ACTIONS.map(a => {
+                    if (!mod.actions.includes(a.key as PermActionKey)) {
+                      return <div key={a.key} />;
+                    }
                     const granted = perms[a.key as keyof PermissionMap];
                     return (
                       <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>
@@ -453,6 +554,32 @@ export default function RolesClient() {
               </button>
               <span style={{ fontSize: 13, color: 'rgba(241,236,225,0.8)', fontWeight: 600 }}>Cho phép đặt lịch (hiện ra trang booking)</span>
             </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 7 }}>Lương cứng (VNĐ/tháng)</label>
+              <div style={{ border: '1px solid rgba(238,138,51,.25)', borderRadius: 6 }}>
+                <Input size="large" variant="borderless" type="number" min={0} value={editBaseSalary} onChange={e => setEditBaseSalary(Math.max(0, Number(e.target.value) || 0))} />
+              </div>
+            </div>
+            <div style={{ fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 8 }}>Hoa hồng theo dịch vụ (%)</div>
+            <div style={{ maxHeight: 220, overflowY: 'auto', marginBottom: 20, border: '1px solid rgba(238,138,51,0.1)', borderRadius: 6, padding: '4px 12px' }}>
+              {services.length === 0 && <div style={{ fontSize: 12.5, color: 'rgba(241,236,225,0.4)', padding: '10px 0' }}>Chưa có dịch vụ nào.</div>}
+              {services.map(svc => (
+                <div key={svc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 0', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
+                  <span style={{ fontSize: 13, color: '#F1ECE1' }}>{svc.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <input
+                      type="number" min={0} max={100} step={0.5}
+                      value={editCommission[svc.id] ?? 0}
+                      onChange={e => setEditCommission(prev => ({ ...prev, [svc.id]: Math.min(100, Math.max(0, Number(e.target.value) || 0)) }))}
+                      style={{ width: 64, background: '#0B1620', border: '1px solid rgba(238,138,51,.25)', color: '#F1ECE1', borderRadius: 6, padding: '6px 8px', fontSize: 13, textAlign: 'right' }}
+                    />
+                    <span style={{ fontSize: 12, color: 'rgba(241,236,225,0.5)' }}>%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div style={{ fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700, marginBottom: 8 }}>Quyền truy cập</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '8px 0 12px', borderBottom: '1px solid rgba(238,138,51,0.16)', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(241,236,225,0.45)', fontWeight: 700 }}>
               <span>Màn hình</span>
@@ -461,7 +588,7 @@ export default function RolesClient() {
             <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               {PERM_MODULES.map(mod => {
                 const perms = editPerms[mod.key] ?? { view: false, create: false, edit: false, delete: false };
-                const allGranted = perms.view && perms.create && perms.edit && perms.delete;
+                const allGranted = mod.actions.every(a => perms[a]);
                 return (
                   <div key={mod.key} style={{ display: 'grid', gridTemplateColumns: '1.6fr repeat(4,1fr)', gap: 10, padding: '11px 0', alignItems: 'center', borderBottom: '1px solid rgba(238,138,51,0.07)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -474,6 +601,9 @@ export default function RolesClient() {
                       <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F1ECE1' }}>{mod.label}</span>
                     </div>
                     {PERM_ACTIONS.map(a => {
+                      if (!mod.actions.includes(a.key as PermActionKey)) {
+                        return <div key={a.key} />;
+                      }
                       const granted = perms[a.key as keyof PermissionMap];
                       return (
                         <div key={a.key} style={{ display: 'flex', justifyContent: 'center' }}>

@@ -32,6 +32,7 @@ const MODULE_LABELS: Record<string, string> = {
   staff: 'Nhân viên',
   shifts: 'Ca làm việc',
   roles: 'Phân quyền',
+  payroll: 'Bảng lương',
   system: 'Hệ thống',
 };
 

@@ -13,6 +13,8 @@ export interface Role {
   isBookable: boolean;
   employeeCount: number;
   permissions: Record<string, PermissionMap>;
+  baseSalary: number;
+  commissionRates: Record<string, number>;
 }
 
 export interface RoleCreatePayload {
@@ -20,6 +22,8 @@ export interface RoleCreatePayload {
   description?: string | null;
   isBookable?: boolean;
   permissions: Record<string, PermissionMap>;
+  baseSalary?: number;
+  commissionRates?: Record<string, number>;
 }
 
 export interface RoleUpdatePayload {
@@ -27,6 +31,8 @@ export interface RoleUpdatePayload {
   description?: string | null;
   isBookable?: boolean;
   permissions?: Record<string, PermissionMap>;
+  baseSalary?: number;
+  commissionRates?: Record<string, number>;
 }
 
 export interface PaginatedResponse<T> {

@@ -35,6 +35,17 @@ const formatHours = (open: string | null, close: string | null) => {
 const dows   = ['CN',  'T2',  'T3',  'T4',  'T5',  'T6',  'T7'];
 const dowsEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+// `toISOString()` quy về UTC nên vào giờ sớm ở múi giờ dương (VN = UTC+7,
+// khoảng 00:00–06:59 local) sẽ lùi lại 1 ngày so với ngày thực tế của máy —
+// khiến ngày gửi lên API lệch với ngày người dùng đang chọn trên UI, và có
+// thể lọt qua bộ lọc "giờ đã qua". Dùng local date parts để tránh lệch múi giờ.
+function toLocalDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function genSlots(open: string, close: string) {
   const toMin = (t: string) => { const p = t.split(':'); return parseInt(p[0]) * 60 + parseInt(p[1]); };
   const o = toMin(open || '09:00'), c = toMin(close || '21:00');
@@ -149,7 +160,7 @@ export default function BookingsClient() {
   const dayItems = Array.from({ length: 10 }).map((_, i) => {
     const dt = new Date(base);
     dt.setDate(base.getDate() + i);
-    const key = dt.toISOString().slice(0, 10);
+    const key = toLocalDateKey(dt);
     const dow = lang === 'vi' ? dows[dt.getDay()] : dowsEn[dt.getDay()];
     return { key, dow, day: dt.getDate(), month: dt.getMonth() + 1, dt };
   });
@@ -162,7 +173,7 @@ export default function BookingsClient() {
     : '—';
 
   const now = new Date();
-  const todayKey = now.toISOString().slice(0, 10);
+  const todayKey = toLocalDateKey(now);
   const currentMin = now.getHours() * 60 + now.getMinutes();
 
   const openTime = branch?.openingTime || '09:00';
