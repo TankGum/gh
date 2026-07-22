@@ -22,12 +22,13 @@ import {
   History,
   LogOut,
   ChevronLeft,
+  Wallet,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 const { Sider } = Layout;
 
-type MenuItem = { key: string; module: string; icon: ReactNode; label: string };
+type MenuItem = { key: string; module: string; icon: ReactNode; label: string; alwaysVisible?: boolean };
 
 const menuGroups: { label?: string; items: MenuItem[] }[] = [
   {
@@ -35,6 +36,8 @@ const menuGroups: { label?: string; items: MenuItem[] }[] = [
       { key: '/dashboard',       module: 'overview',  icon: <LayoutDashboard size={17} />, label: 'Tổng quan' },
       { key: '/revenue',         module: 'revenue',   icon: <BarChart3 size={17} />,       label: 'Doanh thu' },
       { key: '/manage-bookings', module: 'bookings',  icon: <CalendarDays size={17} />,    label: 'Đặt lịch' },
+      // Ai cũng xem được bảng lương của chính mình — chỉ quyền payroll.view mới xem được toàn bộ.
+      { key: '/payroll',         module: 'payroll',   icon: <Wallet size={17} />,          label: 'Bảng lương', alwaysVisible: true },
     ],
   },
   {
@@ -163,7 +166,7 @@ export default function Sidebar() {
           {/* Nav */}
           <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
             {menuGroups.map((group, gi) => {
-              const visible = group.items.filter(item => canView(item.module));
+              const visible = group.items.filter(item => item.alwaysVisible || canView(item.module));
               if (!visible.length) return null;
               return (
                 <div key={gi}>

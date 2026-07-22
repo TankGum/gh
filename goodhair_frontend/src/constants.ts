@@ -1,3 +1,4 @@
+export const SHOP_NAME = "GOODHAIR Barber Shop";
 export const FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61561075626318";
 export const MESSENGER_URL = "https://m.me/61561075626318";
 export const CONTACT_EMAIL = "dangphucbibau@gmail.com";

@@ -12,7 +12,6 @@ export const ROUTE_MODULE: Record<string, string> = {
   '/customers': 'customers',
   '/branches': 'branches',
   '/services': 'services',
-  '/recruitment': 'recruit',
   '/accounts': 'roles',
   '/roles': 'roles',
   '/audit-log': 'logs',

@@ -11,9 +11,14 @@ import { fetchEmployees } from '@/services/employees.api';
 import { fetchBranches } from '@/services/branches.api';
 import { fetchServices } from '@/services/services.api';
 import { fetchShifts } from '@/services/shifts.api';
+import { Printer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBadge } from '@/contexts/BadgeContext';
 import Modal from '@/components/ui/Modal';
+import PrinterPickerModal from '@/components/ui/PrinterPickerModal';
+import { printRaw } from '@/services/printing';
+import { buildReceiptCommands } from '@/services/receiptTemplate';
+import { SHOP_NAME, CONTACT_PHONE } from '@/constants';
 import type { Booking, BookingStatus, BookingCreatePayload, BookingUpdatePayload } from '@/types/booking.type';
 import type { Employee } from '@/types/employee.type';
 import type { Branch } from '@/types/branch.type';
@@ -88,6 +93,7 @@ export default function ManageBookingsClient() {
   const isMobile = useIsMobile();
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [tooltipData, setTooltipData] = useState<{ b: Booking; timeRange: string; svcNames: string; x: number; y: number } | null>(null);
+  const [printerModalOpen, setPrinterModalOpen] = useState(false);
 
   const todayDate = new Date();
   const weekDates = Array.from({ length: 61 }, (_, i) => addDays(toISODate(new Date(todayDate.getTime() - 30 * 86400000)), i));
@@ -231,13 +237,15 @@ export default function ManageBookingsClient() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      const justCompleted = modalMode === 'edit' && originalStatus !== 'completed' && modalData.status === 'completed';
       if (modalMode === 'add') {
         await createBooking(modalData as BookingCreatePayload);
         message.success('Tạo lịch hẹn thành công');
       } else {
         const { id, ...rest } = modalData;
-        await updateBooking(id!, rest as BookingUpdatePayload);
+        const updated = await updateBooking(id!, rest as BookingUpdatePayload);
         message.success('Cập nhật lịch hẹn thành công');
+        if (justCompleted) await printBookingReceipt(updated);
       }
       setModalMode(null);
       setModalData(null);
@@ -325,6 +333,35 @@ export default function ManageBookingsClient() {
     return m;
   }, [services]);
 
+  // In hoá đơn ra máy in nhiệt tại quầy (qua QZ Tray) — lỗi in không chặn
+  // luồng lưu/hoàn thành booking, chỉ báo lỗi nhẹ để nhân viên biết.
+  const printBookingReceipt = useCallback(async (booking: Booking) => {
+    try {
+      const branch = branchMap.get(booking.branchId || '');
+      const employee = employeeMap.get(booking.employeeId || '');
+      const commands = buildReceiptCommands({
+        shopName: SHOP_NAME,
+        branchName: branch?.name || '',
+        branchAddress: branch?.address,
+        branchPhone: CONTACT_PHONE,
+        bookingCode: booking.code,
+        customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        employeeName: employee?.name,
+        date: booking.date,
+        startTime: booking.startTime,
+        services: booking.serviceIds.map(sid => {
+          const svc = serviceMap.get(sid);
+          return { name: svc?.name || 'Dịch vụ', price: svc?.price || 0 };
+        }),
+        total: booking.total,
+      });
+      await printRaw(commands);
+    } catch (e) {
+      message.warning(e instanceof Error ? e.message : 'In hoá đơn thất bại');
+    }
+  }, [branchMap, employeeMap, serviceMap, message]);
+
     return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Page header */}
@@ -333,15 +370,25 @@ export default function ManageBookingsClient() {
           <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4 }}>Đặt lịch</h1>
           <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>{bookings.length} lịch hẹn hôm nay</p>
         </div>
-        {canCreate && (
+        <div style={{ display: 'flex', gap: 10 }}>
           <button
-            onClick={() => openAdd()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#EE8A33', border: 'none', color: '#0B1620', padding: '10px 20px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            onClick={() => setPrinterModalOpen(true)}
+            title="Cấu hình máy in hoá đơn"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: '10px 16px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14"/></svg>
-            Tạo lịch hẹn
+            <Printer size={15} />
+            Máy in
           </button>
-        )}
+          {canCreate && (
+            <button
+              onClick={() => openAdd()}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#EE8A33', border: 'none', color: '#0B1620', padding: '10px 20px', borderRadius: 8, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 5v14M5 12h14"/></svg>
+              Tạo lịch hẹn
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Status legend */}
@@ -643,12 +690,21 @@ export default function ManageBookingsClient() {
 
             {/* Buttons */}
             {readonly ? (
-              <button
-                onClick={() => { setModalMode(null); setModalData(null); setFormErrors({}); }}
-                style={{ width: '100%', background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                Đóng
-              </button>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={() => { setModalMode(null); setModalData(null); setFormErrors({}); }}
+                  style={{ flex: 1, background: 'transparent', border: '1px solid rgba(238,138,51,.3)', color: 'rgba(241,236,225,.8)', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={() => printBookingReceipt(modalData as Booking)}
+                  style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#EE8A33', border: 'none', color: '#0B1620', padding: 12, borderRadius: 6, fontFamily: "'Hanken Grotesk',sans-serif", fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <Printer size={15} />
+                  In lại hoá đơn
+                </button>
+              </div>
             ) : (
             <div style={{ display: 'flex', gap: 12 }}>
               <button
@@ -691,6 +747,8 @@ export default function ManageBookingsClient() {
           </div>
         </div>
       </Modal>
+
+      <PrinterPickerModal open={printerModalOpen} onClose={() => setPrinterModalOpen(false)} />
 
       {/* Tooltip */}
       {tooltipData && (
